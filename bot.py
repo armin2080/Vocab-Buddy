@@ -6,6 +6,8 @@ from database import DatabaseManager
 from telegram.ext import ConversationHandler, MessageHandler, filters, CallbackQueryHandler
 from agent import GroqClient
 from datetime import datetime
+import logging
+import os
 
 
 # Load the bot token from the config file
@@ -13,15 +15,32 @@ with open("config.json", "r") as f:
     config = json.load(f)
 TOKEN: Final = config["BOT_TOKEN"]
 
+# Set up logging
+logging.basicConfig(
+    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
+    level=logging.INFO,
+    handlers=[
+        logging.FileHandler('vocab_buddy.log'),
+        logging.StreamHandler()
+    ]
+)
+logger = logging.getLogger(__name__)
+
+# Log startup
+logger.info("🚀 Vocab Buddy Bot Starting Up...")
+logger.info("📊 Loading configuration and initializing components...")
 
 # Start database manager and agent client
 groq_client = GroqClient()
 db_manager = DatabaseManager()
 
+logger.info("✅ Database Manager and Groq Client initialized successfully")
+
 
 # Define conversation states
 WORD, MEANING = range(2)
 SHOW_WORDS, SHOW_EXAMPLES, SHOW_PARAGRAPH = range(3, 6)
+MANAGE_VOCAB = range(6, 7)
 
 
 
@@ -32,15 +51,19 @@ SHOW_WORDS, SHOW_EXAMPLES, SHOW_PARAGRAPH = range(3, 6)
 
 
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
-
     user_id = update.effective_user.id
     username = update.effective_user.username
+    
+    logger.info(f"👋 START command from user {username} (ID: {user_id})")
+    
     user_exists = db_manager.fetch_all('users', where_clause='telegram_id', where_args=[user_id])
     if not user_exists:
         db_manager.add_instance('users', columns=['telegram_id', 'username'], new_vals=[user_id, username])
         text = f"Hello @{username}! \nWelcome to Vocab Buddy! You have been registered."
+        logger.info(f"✅ New user registered: {username} (ID: {user_id})")
     else:
         text = f"Hello @{username}! \nWelcome back to Vocab Buddy!"
+        logger.info(f"🔄 Returning user: {username} (ID: {user_id})")
 
     await update.message.reply_text(text)
 
@@ -48,11 +71,28 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     
 
 async def add_word(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    user_id = update.effective_user.id
+    username = update.effective_user.username
+    
+    logger.info(f"📝 ADD_WORD command from user {username} (ID: {user_id})")
+    
     await update.message.reply_text("Please enter the word you want to add:")
     return WORD
 
 async def receive_word(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    word, translation, cefr_level = groq_client.get_word_info(update.message.text).split(" - ")
+    user_id = update.effective_user.id
+    username = update.effective_user.username
+    input_word = update.message.text
+    
+    logger.info(f"🔍 Processing word '{input_word}' for user {username} (ID: {user_id})")
+    
+    try:
+        word, translation, cefr_level = groq_client.get_word_info(input_word).split(" - ")
+        logger.info(f"✅ Word info received: {word} - {translation} - {cefr_level}")
+    except Exception as e:
+        logger.error(f"❌ Error getting word info for '{input_word}': {e}")
+        await update.message.reply_text("Sorry, I couldn't process that word. Please try again.")
+        return ConversationHandler.END
     context.user_data['word'] = word
     context.user_data['translation'] = translation
     context.user_data['cefr_level'] = cefr_level
@@ -76,9 +116,10 @@ async def receive_word(update: Update, context: ContextTypes.DEFAULT_TYPE):
         db_translation = db_word[2]
         db_cefr_level = db_word[3]
 
-        
         context.user_data['word_exists'] = True
         context.user_data['word_id'] = db_word_id
+        
+        logger.info(f"🔍 Word '{word}' already exists in database (ID: {db_word_id})")
 
         await update.message.reply_text(
             f"⚠️ <b>The word</b> <i>'{db_word_text}'</i> <b>already exists in the database.</b>\n"
@@ -90,6 +131,8 @@ async def receive_word(update: Update, context: ContextTypes.DEFAULT_TYPE):
         )
         return ConversationHandler.END
 
+    logger.info(f"🆕 New word '{word}' will be added to database")
+    
     await update.message.reply_text(
         f"✨ <b>Word:</b> <i>{word}</i>\n"
         f"💡 <b>Meaning:</b> <i>{translation}</i>\n"
@@ -105,12 +148,21 @@ async def button_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
     query = update.callback_query
     await query.answer()
     
+    user_id = update.effective_user.id
+    username = update.effective_user.username
+    callback_data = query.data
+    
+    logger.info(f"🔘 Button callback '{callback_data}' from user {username} (ID: {user_id})")
+    
     # Handle review conversation callbacks
     if query.data == "continue_examples":
+        logger.info(f"📚 User {username} continuing to examples")
         return await show_examples(update, context)
     elif query.data == "continue_paragraph":
+        logger.info(f"📖 User {username} continuing to paragraph")
         return await show_paragraph(update, context)
     elif query.data == "complete_review":
+        logger.info(f"✅ User {username} completing review")
         return await complete_review(update, context)
     
     # Only handle yes/no callbacks for word confirmation
@@ -118,6 +170,7 @@ async def button_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
         return
     
     if query.data == "no":
+        logger.info(f"❌ User {username} declined word addition")
         await query.edit_message_text("Please start over by sending /add_word.", reply_markup=None)
         return
     
@@ -125,16 +178,19 @@ async def button_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
     word = context.user_data['word']
     translation = context.user_data['translation']
     cefr_level = context.user_data['cefr_level']
-    user_id = update.effective_user.id
+    
+    logger.info(f"✅ User {username} confirmed word addition: '{word}'")
     
     if context.user_data['word_exists']:
         # Word exists in words table, get its ID
         word_id = context.user_data['word_id']
+        logger.info(f"🔄 Using existing word ID: {word_id}")
     else:
         # Word doesn't exist, add it to words table
         db_manager.add_instance('words', columns=['word', 'translation','cefr_level'], new_vals=[word, translation, cefr_level])
         # Get the newly created word's ID
         word_id = db_manager.fetch_all('words', where_clause='word', where_args=[word])[0][0]
+        logger.info(f"🆕 Created new word in database with ID: {word_id}")
     
     # Now check if user already has this word in their collection
     user_word_exists = db_manager.fetch_all('words_users', 
@@ -151,6 +207,7 @@ async def button_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
         
     if user_has_word:
+        logger.warning(f"⚠️ User {username} already has word '{word}' in vocabulary")
         await query.edit_message_text(
             f"⚠️ <b>You already have the word</b> <i>'{word}'</i> <b>in your vocabulary!</b> ✨\n\nTry adding a new word or use /add_word again.",
             reply_markup=None,
@@ -160,6 +217,7 @@ async def button_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
     else:
         # Add word to user's collection
         db_manager.add_instance('words_users', columns=['user_id', 'word_id'], new_vals=[user_id, word_id])
+        logger.info(f"🎉 Successfully added word '{word}' to user {username}'s vocabulary")
         await query.edit_message_text(
             f"🎉 Great! The word <b>'{word}'</b> with translation <b>'{translation}'</b> has been added to your vocabulary! 🚀\n\nKeep learning! 📚",
             reply_markup=None,
@@ -169,8 +227,15 @@ async def button_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
 async def review_words(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user_id = update.effective_user.id
+    username = update.effective_user.username
+    
+    logger.info(f"📖 REVIEW_WORDS command from user {username} (ID: {user_id})")
+    
     user_words = db_manager.fetch_all('words_users', where_clause='user_id', where_args=[user_id])
+    logger.info(f"📊 User {username} has {len(user_words)} words in vocabulary")
+    
     if len(user_words) < 5:
+        logger.warning(f"⚠️ User {username} has insufficient words for review ({len(user_words)} < 5)")
         await update.message.reply_text(
             "🚦 <b>Not enough words!</b>\n\n"
             "You need at least <b>5 words</b> in your vocabulary to start a review session. "
@@ -181,6 +246,8 @@ async def review_words(update: Update, context: ContextTypes.DEFAULT_TYPE):
     
     words_df = db_manager.choose_words(user_id)
     words_df = words_df.sort_values(by='prob', ascending=False).head(5)
+    
+    logger.info(f"🎯 Selected 5 words for review for user {username}")
     
     words_info = []
     for _, row in words_df.iterrows():
@@ -195,6 +262,9 @@ async def review_words(update: Update, context: ContextTypes.DEFAULT_TYPE):
     # Store the words info in context for later use
     context.user_data['review_words_info'] = words_info
     context.user_data['word_list'] = [word for word, _, _ in words_info]
+    
+    selected_words = [word for word, _, _ in words_info]
+    logger.info(f"📝 Review words for {username}: {selected_words}")
 
     reply_text = "📝 <b>Your review words:</b>\n\n"
     for idx, (word, translation, cefr_level) in enumerate(words_info, 1):
@@ -244,7 +314,10 @@ async def show_paragraph(update: Update, context: ContextTypes.DEFAULT_TYPE):
     paragraph = groq_client.write_paragraph(word_list).split('\n')
     reply_text = "📝 <b>Paragraph using your words:</b>\n\n"
     reply_text += f"<b>German: </b> <i>{paragraph[0].strip()}</i>\n\n"
-    reply_text += f"<b>English: </b> <i>{paragraph[2].strip()}</i>\n\n"
+    try:
+        reply_text += f"<b>English: </b> <i>{paragraph[2].strip()}</i>\n\n"
+    except IndexError:
+        reply_text += f"<b>English: </b> <i>{paragraph[1].strip()}</i>\n\n"
     
     # Add completion button
     reply_keyboard = [
@@ -299,13 +372,255 @@ async def complete_review(update: Update, context: ContextTypes.DEFAULT_TYPE):
     )
     return ConversationHandler.END
 
+async def top_words(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """Show top words by CEFR level based on total review count across all users"""
+    user_id = update.effective_user.id
+    username = update.effective_user.username
+    
+    logger.info(f"📊 TOP_WORDS command from user {username} (ID: {user_id})")
+    
+    top_words_by_level = db_manager.get_top_words_by_level(limit_per_level=5)
+    
+    if not top_words_by_level:
+        logger.info("📭 No word statistics available yet")
+        await update.message.reply_text(
+            "📊 <b>No word statistics available yet!</b>\n\n"
+            "Start adding and reviewing words to see the most popular vocabulary! 📚",
+            parse_mode="HTML"
+        )
+        return
+    
+    logger.info(f"📈 Displaying top words statistics to user {username}")
+    
+    # Define level order and emojis
+    level_order = ['A1', 'A2', 'B1', 'B2', 'C1', 'C2']
+    level_emojis = {
+        'A1': '🟢',
+        'A2': '🔵', 
+        'B1': '🟡',
+        'B2': '🟠',
+        'C1': '🔴',
+        'C2': '🟣'
+    }
+    
+    current_date = datetime.now().strftime("%B %d, %Y")
+    reply_text = f"📊 <b>Top Words by CEFR Level - {current_date}</b>\n"
+    reply_text += "<i>Most reviewed words across all users</i>\n\n"
+    
+    for level in level_order:
+        if level in top_words_by_level:
+            emoji = level_emojis.get(level, '⭐')
+            reply_text += f"{emoji} <b>{level} Level:</b>\n"
+            
+            for idx, (word, translation, total_reviews) in enumerate(top_words_by_level[level], 1):
+                reply_text += f"  {idx}. <b>{word}</b> - <i>{translation}</i> ({total_reviews} reviews)\n"
+            
+            reply_text += "\n"
+    
+    reply_text += "💡 <i>Keep practicing to contribute to these statistics!</i>"
+    
+    await update.message.reply_text(reply_text, parse_mode="HTML")
 
+async def my_words(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """Show user's vocabulary list with option to remove words"""
+    user_id = update.effective_user.id
+    username = update.effective_user.username
+    
+    logger.info(f"📚 MY_WORDS command from user {username} (ID: {user_id})")
+    
+    user_words = db_manager.fetch_all('words_users', where_clause='user_id', where_args=[user_id])
+    logger.info(f"📊 User {username} has {len(user_words)} words in vocabulary")
+    
+    if not user_words:
+        logger.info(f"📭 User {username} has empty vocabulary")
+        await update.message.reply_text(
+            "📚 <b>Your vocabulary is empty!</b>\n\n"
+            "Start adding words using <b>/add_word</b> to build your vocabulary! 💪📖",
+            parse_mode="HTML"
+        )
+        return ConversationHandler.END
+    
+    # Get word details for each word in user's collection
+    words_info = []
+    for user_word in user_words:
+        word_id = user_word[2]  # Assuming columns: id, user_id, word_id, review_count, last_reviewed
+        word_data = db_manager.fetch_all('words', where_clause='id', where_args=[word_id])
+        if word_data:
+            word_db_row = word_data[0]
+            word_text = word_db_row[1]  # word
+            translation = word_db_row[2]  # translation
+            cefr_level = word_db_row[3]  # cefr_level
+            review_count = user_word[3] if len(user_word) > 3 else 0  # review_count
+            words_info.append((word_id, word_text, translation, cefr_level, review_count))
+    
+    # Sort by word alphabetically
+    words_info.sort(key=lambda x: x[1].lower())
+    
+    reply_text = f"📚 <b>Your Vocabulary ({len(words_info)} words)</b>\n\n"
+    
+    # Group by CEFR level
+    level_groups = {}
+    for word_info in words_info:
+        level = word_info[3]
+        if level not in level_groups:
+            level_groups[level] = []
+        level_groups[level].append(word_info)
+    
+    # Define level order and emojis
+    level_order = ['A1', 'A2', 'B1', 'B2', 'C1', 'C2']
+    level_emojis = {
+        'A1': '🟢',
+        'A2': '🔵', 
+        'B1': '🟡',
+        'B2': '🟠',
+        'C1': '🔴',
+        'C2': '🟣'
+    }
+    
+    for level in level_order:
+        if level in level_groups:
+            emoji = level_emojis.get(level, '⭐')
+            reply_text += f"{emoji} <b>{level} Level:</b>\n"
+            
+            for word_info in level_groups[level]:
+                word_id, word_text, translation, cefr_level, review_count = word_info
+                reply_text += f"  • <b>{word_text}</b> - <i>{translation}</i> (reviewed {review_count} times)\n"
+            
+            reply_text += "\n"
+    
+    # Add management buttons
+    reply_keyboard = [
+        [InlineKeyboardButton("🗑️ Remove Words", callback_data="manage_vocab")]
+    ]
+    markup = InlineKeyboardMarkup(reply_keyboard)
+    
+    reply_text += "💡 <i>Click 'Remove Words' to manage your vocabulary list.</i>"
+    
+    await update.message.reply_text(reply_text, reply_markup=markup, parse_mode="HTML")
+    return MANAGE_VOCAB
 
+async def manage_vocabulary(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """Show vocabulary management interface with remove options"""
+    query = update.callback_query
+    await query.answer()
+    
+    user_id = update.effective_user.id
+    user_words = db_manager.fetch_all('words_users', where_clause='user_id', where_args=[user_id])
+    
+    if not user_words:
+        await query.edit_message_text(
+            "📚 <b>Your vocabulary is empty!</b>\n\n"
+            "Start adding words using <b>/add_word</b> to build your vocabulary! 💪📖",
+            reply_markup=None,
+            parse_mode="HTML"
+        )
+        return ConversationHandler.END
+    
+    # Get word details for each word in user's collection
+    words_info = []
+    for user_word in user_words:
+        word_id = user_word[2]  # Assuming columns: id, user_id, word_id, review_count, last_reviewed
+        word_data = db_manager.fetch_all('words', where_clause='id', where_args=[word_id])
+        if word_data:
+            word_db_row = word_data[0]
+            word_text = word_db_row[1]  # word
+            translation = word_db_row[2]  # translation
+            cefr_level = word_db_row[3]  # cefr_level
+            words_info.append((word_id, word_text, translation, cefr_level))
+    
+    # Sort by word alphabetically
+    words_info.sort(key=lambda x: x[1].lower())
+    
+    reply_text = f"🗑️ <b>Remove Words from Your Vocabulary</b>\n\n"
+    reply_text += "<i>Click on a word to remove it from your vocabulary:</i>\n\n"
+    
+    # Create buttons for each word (max 20 to avoid hitting button limits)
+    buttons = []
+    for i, (word_id, word_text, translation, cefr_level) in enumerate(words_info[:20]):
+        button_text = f"❌ {word_text} ({cefr_level})"
+        callback_data = f"remove_word_{word_id}"
+        buttons.append([InlineKeyboardButton(button_text, callback_data=callback_data)])
+    
+    # Add back button
+    buttons.append([InlineKeyboardButton("⬅️ Back to My Words", callback_data="back_to_words")])
+    
+    if len(words_info) > 20:
+        reply_text += f"\n<i>Showing first 20 words out of {len(words_info)} total words.</i>"
+    
+    markup = InlineKeyboardMarkup(buttons)
+    
+    await query.edit_message_text(reply_text, reply_markup=markup, parse_mode="HTML")
+    return MANAGE_VOCAB
+
+async def handle_word_removal(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """Handle word removal from user's vocabulary"""
+    query = update.callback_query
+    await query.answer()
+    
+    user_id = update.effective_user.id
+    username = update.effective_user.username
+    
+    if query.data == "back_to_words":
+        logger.info(f"⬅️ User {username} navigating back to word list")
+        return await my_words(update, context)
+    
+    if query.data.startswith("remove_word_"):
+        word_id = int(query.data.replace("remove_word_", ""))
+        
+        logger.info(f"🗑️ User {username} attempting to remove word ID: {word_id}")
+        
+        # Get word details before removing
+        word_data = db_manager.fetch_all('words', where_clause='id', where_args=[word_id])
+        if word_data:
+            word_text = word_data[0][1]
+            
+            # Remove word from user's collection using DatabaseManager methods
+            # First, get the record ID from words_users table
+            user_word_record = db_manager.fetch_all('words_users', 
+                                                   where_clause='user_id = ? AND word_id = ?', 
+                                                   where_args=[user_id, word_id])
+            
+            if user_word_record:
+                record_id = user_word_record[0][0]  # Get the ID of the words_users record
+                
+                # Delete the record using the delete_instance method
+                db_manager.delete_instance('words_users', where_clause='id = ?', where_args=[record_id])
+                
+                logger.info(f"✅ Successfully removed word '{word_text}' from user {username}'s vocabulary")
+                
+                await query.edit_message_text(
+                    f"✅ <b>Word Removed Successfully!</b>\n\n"
+                    f"The word <b>'{word_text}'</b> has been removed from your vocabulary.\n\n"
+                    f"You can add it back anytime using <b>/add_word</b>.",
+                    reply_markup=None,
+                    parse_mode="HTML"
+                )
+            else:
+                logger.warning(f"⚠️ Word ID {word_id} not found in user {username}'s vocabulary")
+                await query.edit_message_text(
+                    f"❌ <b>Error!</b>\n\n"
+                    f"Could not find the word in your vocabulary. It may have already been removed.",
+                    reply_markup=None,
+                    parse_mode="HTML"
+                )
+            return ConversationHandler.END
+    
+    return ConversationHandler.END
 
 
 def main():
+    logger.info("🔧 Initializing Telegram Bot Application...")
+    
+    # Create application
     app = ApplicationBuilder().token(TOKEN).build()
+    
+    logger.info("🎯 Setting up command handlers...")
+    
+    # Add command handlers
     app.add_handler(CommandHandler("start", start))
+    app.add_handler(CommandHandler("top_words", top_words))
+    
+    logger.info("🔄 Setting up conversation handlers...")
     
     # Add conversation handlers first (more specific)
     add_word_conv = ConversationHandler(
@@ -326,17 +641,34 @@ def main():
         per_message=False,
     )
 
+    vocab_manage_conv = ConversationHandler(
+        entry_points=[CommandHandler("my_words", my_words)],
+        states={
+            MANAGE_VOCAB: [
+                CallbackQueryHandler(manage_vocabulary, pattern="^manage_vocab$"),
+                CallbackQueryHandler(handle_word_removal, pattern="^(remove_word_|back_to_words)"),
+            ],
+        },
+        fallbacks=[],
+        per_message=False,
+    )
+
     app.add_handler(add_word_conv)
     app.add_handler(review_conv)
+    app.add_handler(vocab_manage_conv)
     
     # Add general callback handler last (less specific)
     app.add_handler(CallbackQueryHandler(button_callback))
 
-
-
-
-
-    app.run_polling()
+    logger.info("✅ All handlers registered successfully")
+    logger.info("🚀 Starting bot polling...")
+    
+    try:
+        app.run_polling()
+    except Exception as e:
+        logger.error(f"❌ Critical error in bot execution: {e}")
+        raise
 
 if __name__ == "__main__":
+    logger.info("🌟 Vocab Buddy Bot Application Starting...")
     main()
