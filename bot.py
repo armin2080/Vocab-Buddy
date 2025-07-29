@@ -5,6 +5,7 @@ from typing import Final
 from database import DatabaseManager
 from telegram.ext import ConversationHandler, MessageHandler, filters, CallbackQueryHandler
 from agent import GroqClient
+from datetime import datetime
 
 
 # Load the bot token from the config file
@@ -259,6 +260,35 @@ async def show_paragraph(update: Update, context: ContextTypes.DEFAULT_TYPE):
     return ConversationHandler.END
 
 async def complete_review(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    # Get the user ID and the words that were reviewed
+    user_id = update.effective_user.id
+    word_list = context.user_data.get('word_list', [])
+    
+    # Update review count and last_reviewed for each word
+    for word in word_list:
+        # Get the word_id from the words table
+        word_data = db_manager.fetch_all('words', where_clause='word', where_args=[word])
+        if word_data:
+            word_id = word_data[0][0]  # Get the word ID
+            
+            # Get current review data for this user-word combination
+            current_data = db_manager.fetch_all('words_users', 
+                                              columns='review_count', 
+                                              where_clause='user_id = ? AND word_id = ?', 
+                                              where_args=[user_id, word_id])
+            
+            if current_data:
+                current_review_count = current_data[0][0]
+                new_review_count = current_review_count + 1
+                current_time = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+                
+                # Update the record
+                db_manager.edit_instance('words_users',
+                                       columns=['review_count', 'last_reviewed'],
+                                       new_vals=[new_review_count, current_time],
+                                       where_clause='user_id = ? AND word_id = ?',
+                                       where_args=[user_id, word_id])
+    
     await update.callback_query.edit_message_text(
         "🎉 <b>Excellent work!</b> 🌟\n\n"
         "You've successfully completed your vocabulary review session! "
@@ -268,8 +298,6 @@ async def complete_review(update: Update, context: ContextTypes.DEFAULT_TYPE):
         parse_mode="HTML"
     )
     return ConversationHandler.END
-
-
 
 
 
