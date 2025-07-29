@@ -438,7 +438,7 @@ async def my_words(update: Update, context: ContextTypes.DEFAULT_TYPE):
             "Start adding words using <b>/add_word</b> to build your vocabulary! 💪📖",
             parse_mode="HTML"
         )
-        return ConversationHandler.END
+        return
     
     # Get word details for each word in user's collection
     words_info = []
@@ -497,7 +497,6 @@ async def my_words(update: Update, context: ContextTypes.DEFAULT_TYPE):
     reply_text += "💡 <i>Click 'Remove Words' to manage your vocabulary list.</i>"
     
     await update.message.reply_text(reply_text, reply_markup=markup, parse_mode="HTML")
-    return MANAGE_VOCAB
 
 async def manage_vocabulary(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """Show vocabulary management interface with remove options"""
@@ -562,7 +561,65 @@ async def handle_word_removal(update: Update, context: ContextTypes.DEFAULT_TYPE
     
     if query.data == "back_to_words":
         logger.info(f"⬅️ User {username} navigating back to word list")
-        return await my_words(update, context)
+        # Call my_words function but adapt for callback query instead of message
+        user_words = db_manager.fetch_all('words_users', where_clause='user_id', where_args=[user_id])
+        
+        if not user_words:
+            await query.edit_message_text(
+                "📚 <b>Your vocabulary is empty!</b>\n\n"
+                "Start adding words using <b>/add_word</b> to build your vocabulary! 💪📖",
+                reply_markup=None,
+                parse_mode="HTML"
+            )
+            return ConversationHandler.END
+        
+        # Get word details for each word in user's collection
+        words_info = []
+        for user_word in user_words:
+            word_id = user_word[2]
+            word_data = db_manager.fetch_all('words', where_clause='id', where_args=[word_id])
+            if word_data:
+                word_db_row = word_data[0]
+                word_text = word_db_row[1]
+                translation = word_db_row[2]
+                cefr_level = word_db_row[3]
+                review_count = user_word[3] if len(user_word) > 3 else 0
+                words_info.append((word_id, word_text, translation, cefr_level, review_count))
+        
+        words_info.sort(key=lambda x: x[1].lower())
+        reply_text = f"📚 <b>Your Vocabulary ({len(words_info)} words)</b>\n\n"
+        
+        # Group by CEFR level
+        level_groups = {}
+        for word_info in words_info:
+            level = word_info[3]
+            if level not in level_groups:
+                level_groups[level] = []
+            level_groups[level].append(word_info)
+        
+        level_order = ['A1', 'A2', 'B1', 'B2', 'C1', 'C2']
+        level_emojis = {
+            'A1': '🟢', 'A2': '🔵', 'B1': '🟡',
+            'B2': '🟠', 'C1': '🔴', 'C2': '🟣'
+        }
+        
+        for level in level_order:
+            if level in level_groups:
+                emoji = level_emojis.get(level, '⭐')
+                reply_text += f"{emoji} <b>{level} Level:</b>\n"
+                for word_info in level_groups[level]:
+                    word_id, word_text, translation, cefr_level, review_count = word_info
+                    reply_text += f"  • <b>{word_text}</b> - <i>{translation}</i> (reviewed {review_count} times)\n"
+                reply_text += "\n"
+        
+        reply_keyboard = [
+            [InlineKeyboardButton("🗑️ Remove Words", callback_data="manage_vocab")]
+        ]
+        markup = InlineKeyboardMarkup(reply_keyboard)
+        reply_text += "💡 <i>Click 'Remove Words' to manage your vocabulary list.</i>"
+        
+        await query.edit_message_text(reply_text, reply_markup=markup, parse_mode="HTML")
+        return MANAGE_VOCAB
     
     if query.data.startswith("remove_word_"):
         word_id = int(query.data.replace("remove_word_", ""))
@@ -619,6 +676,7 @@ def main():
     # Add command handlers
     app.add_handler(CommandHandler("start", start))
     app.add_handler(CommandHandler("top_words", top_words))
+    app.add_handler(CommandHandler("my_words", my_words))
     
     logger.info("🔄 Setting up conversation handlers...")
     
@@ -642,10 +700,9 @@ def main():
     )
 
     vocab_manage_conv = ConversationHandler(
-        entry_points=[CommandHandler("my_words", my_words)],
+        entry_points=[CallbackQueryHandler(manage_vocabulary, pattern="^manage_vocab$")],
         states={
             MANAGE_VOCAB: [
-                CallbackQueryHandler(manage_vocabulary, pattern="^manage_vocab$"),
                 CallbackQueryHandler(handle_word_removal, pattern="^(remove_word_|back_to_words)"),
             ],
         },
