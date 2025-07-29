@@ -87,7 +87,12 @@ class DatabaseManager:
     def fetch_all(self, table, columns='*', where_clause=None, where_args=None):
         prompt = f'SELECT {columns} FROM {table}'
         if where_clause and where_args:
-            prompt += f' WHERE {where_clause}=?'
+            # Check if where_clause already contains operators (like = or AND)
+            if '=' in where_clause or 'AND' in where_clause or 'OR' in where_clause:
+                prompt += f' WHERE {where_clause}'
+            else:
+                # Legacy behavior for simple column name
+                prompt += f' WHERE {where_clause}=?'
         
         with self.conn:
             cursor = self.conn.execute(prompt, where_args or [])
