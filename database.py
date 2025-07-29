@@ -124,6 +124,38 @@ class DatabaseManager:
         normalized = normalize_scores(words)
         selected = select_words(normalized, k=k)
         return pd.DataFrame(selected)
+    
+    def get_top_words_by_level(self, limit_per_level=10):
+        """
+        Get top words by total review count for each CEFR level.
+        Returns a dictionary with levels as keys and lists of (word, translation, total_reviews) as values.
+        """
+        # SQL query to get total review count for each word grouped by CEFR level
+        query = """
+        SELECT w.cefr_level, w.word, w.translation, SUM(wu.review_count) as total_reviews
+        FROM words w
+        JOIN words_users wu ON w.id = wu.word_id
+        GROUP BY w.cefr_level, w.word, w.translation
+        ORDER BY w.cefr_level, total_reviews DESC
+        """
+        
+        with self.conn:
+            cursor = self.conn.execute(query)
+            results = cursor.fetchall()
+        
+        # Group results by CEFR level
+        level_words = {}
+        for row in results:
+            cefr_level, word, translation, total_reviews = row
+            
+            if cefr_level not in level_words:
+                level_words[cefr_level] = []
+            
+            # Only add if we haven't reached the limit for this level
+            if len(level_words[cefr_level]) < limit_per_level:
+                level_words[cefr_level].append((word, translation, total_reviews))
+        
+        return level_words
 
 
 
