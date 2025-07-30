@@ -67,6 +67,79 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     await update.message.reply_text(text)
 
+async def help_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """Show comprehensive help information about bot commands and features"""
+    user_id = update.effective_user.id
+    username = update.effective_user.username
+    
+    logger.info(f"❓ HELP command from user {username} (ID: {user_id})")
+    
+    help_text = """
+🤖 <b>Vocab Buddy - Your German Learning Assistant</b>
+
+Welcome to Vocab Buddy! Here's everything you need to know to get started with improving your German vocabulary:
+
+📚 <b>MAIN COMMANDS:</b>
+
+🆕 <b>/add_word</b> - Add new German words to your vocabulary
+   • Simply type the command and follow the prompts
+   • Only German words/phrases are accepted
+   • The bot will automatically provide translations and CEFR levels
+   • Confirm if the information is correct to add it to your collection
+
+📖 <b>/review_words</b> - Practice with your vocabulary (minimum 5 words needed)
+   • Reviews 5 words selected based on spaced repetition algorithm
+   • Shows word list → example sentences → contextual paragraph
+   • Tracks your review progress automatically
+
+📚 <b>/my_words</b> - View and manage your vocabulary collection
+   • See all your words organized by CEFR levels (A1-C2)
+   • View review statistics for each word
+   • Remove words you no longer want to study
+
+📊 <b>/top_words</b> - See most popular words across all users
+   • Discover trending vocabulary by difficulty level
+   • See what other learners are studying most
+
+❓ <b>/help</b> - Show this help message
+
+🎯 <b>HOW TO GET STARTED:</b>
+
+1️⃣ Use <b>/add_word</b> to build your vocabulary (aim for at least 5 words)
+2️⃣ Practice with <b>/review_words</b> to reinforce learning
+3️⃣ Check your progress with <b>/my_words</b>
+4️⃣ Discover new words with <b>/top_words</b>
+
+📈 <b>LEARNING FEATURES:</b>
+
+🔄 <b>Spaced Repetition:</b> Words are reviewed based on how well you know them
+🎯 <b>CEFR Levels:</b> Words are categorized from A1 (beginner) to C2 (advanced)
+📝 <b>Contextual Learning:</b> See words in example sentences and paragraphs
+📊 <b>Progress Tracking:</b> Monitor your review history and learning stats
+
+💡 <b>TIPS FOR SUCCESS:</b>
+
+• Add words regularly to build a diverse vocabulary
+• Review consistently to improve retention
+• Read the example sentences and paragraphs carefully
+• Don't rush - take time to understand each word in context
+• Remove words you've mastered to focus on challenging ones
+
+🎓 <b>CEFR LEVEL GUIDE:</b>
+🟢 A1 - Beginner (basic everyday words)
+🔵 A2 - Elementary (common phrases and expressions)
+🟡 B1 - Intermediate (familiar topics and situations)
+🟠 B2 - Upper-Intermediate (complex texts and ideas)
+🔴 C1 - Advanced (sophisticated vocabulary)
+🟣 C2 - Proficient (near-native level expressions)
+
+Ready to start learning? Try <b>/add_word</b> to add your first German word! 🚀
+
+<i>Need more help? Feel free to explore the commands and see how they work!</i>
+"""
+    
+    await update.message.reply_text(help_text, parse_mode="HTML")
+
 
     
 
@@ -87,12 +160,39 @@ async def receive_word(update: Update, context: ContextTypes.DEFAULT_TYPE):
     logger.info(f"🔍 Processing word '{input_word}' for user {username} (ID: {user_id})")
     
     try:
-        word, translation, cefr_level = groq_client.get_word_info(input_word).split(" - ")
+        ai_response = groq_client.get_word_info(input_word)
+        logger.info(f"🤖 AI response: {ai_response}")
+        
+        # Check if the word is not German
+        if ai_response.strip().lower() == "not german":
+            logger.warning(f"⚠️ Non-German word detected: '{input_word}' from user {username}")
+            await update.message.reply_text(
+                "🇩🇪 <b>Please enter a German word!</b>\n\n"
+                f"The word/phrase <i>'{input_word}'</i> doesn't appear to be German. "
+                "This bot is designed to help you learn German vocabulary.\n\n"
+                "Please try again with a German word! 🔄",
+                parse_mode="HTML"
+            )
+            return ConversationHandler.END 
+        
+        word, translation, cefr_level = ai_response.split(" - ")
         logger.info(f"✅ Word info received: {word} - {translation} - {cefr_level}")
+    except ValueError as e:
+        logger.error(f"❌ Error parsing AI response for '{input_word}': {e} | Response: {ai_response}")
+        await update.message.reply_text(
+            "❌ <b>Sorry, I couldn't process that word properly.</b>\n\n"
+            "Please try again with a different German word.",
+            parse_mode="HTML"
+        )
+        return WORD  # Keep the conversation active for retry
     except Exception as e:
         logger.error(f"❌ Error getting word info for '{input_word}': {e}")
-        await update.message.reply_text("Sorry, I couldn't process that word. Please try again.")
-        return ConversationHandler.END
+        await update.message.reply_text(
+            "❌ <b>Sorry, there was an error processing your word.</b>\n\n"
+            "Please try again.",
+            parse_mode="HTML"
+        )
+        return WORD  # Keep the conversation active for retry
     context.user_data['word'] = word
     context.user_data['translation'] = translation
     context.user_data['cefr_level'] = cefr_level
@@ -675,6 +775,7 @@ def main():
     
     # Add command handlers
     app.add_handler(CommandHandler("start", start))
+    app.add_handler(CommandHandler("help", help_command))
     app.add_handler(CommandHandler("top_words", top_words))
     app.add_handler(CommandHandler("my_words", my_words))
     
@@ -686,7 +787,7 @@ def main():
         states={
             WORD: [MessageHandler(filters.TEXT & ~filters.COMMAND, receive_word)],
         },
-        fallbacks=[],
+        fallbacks=[CommandHandler("cancel", lambda update, context: ConversationHandler.END)],
     )
 
     review_conv = ConversationHandler(
