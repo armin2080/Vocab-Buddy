@@ -1,6 +1,17 @@
 # 🇩🇪 Vocab Buddy - German Vocabulary Learning Bot
 
-A smart Telegram bot designed to help users learn German vocabulary through spaced repetition, interactive review sessions, and community-driven word statistics.
+[![Python](https://img.shields.io/badge/Python-3.8+-blue.svg)](https://python.org)
+[![Telegram Bot](https://img.shields.io/badge/Telegram-Bot-blue.svg)](https://core.telegram.org/bots)
+[![Groq AI](https://img.shields.io/badge/AI-Groq-green.svg)](https://groq.com)
+[![License](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
+
+A smart Telegram bot designed to help users learn German vocabulary through spaced repetition, interactive review sessions, and AI-powered language validation.
+
+## 🚀 **[Try the Bot Now!](https://t.me/vocabularyBuddy_bot)**
+
+**Ready to start learning German? Click the link above to begin your vocabulary journey!** 📚✨
+
+Simply search for `@vocabularyBuddy_bot` on Telegram or use the direct link: https://t.me/vocabularyBuddy_bot
 
 ## 📋 Table of Contents
 
@@ -13,16 +24,33 @@ A smart Telegram bot designed to help users learn German vocabulary through spac
 - [Project Structure](#-project-structure)
 - [Database Schema](#-database-schema)
 - [Logging](#-logging)
+- [Architecture](#-architecture)
+- [Development](#-development-workflow)
 - [Contributing](#-contributing)
 - [License](#-license)
+
+---
+
+## 🌟 What's New
+
+### ✨ Latest Updates
+- 🇩🇪 **German Language Validation**: AI now ensures only authentic German words are accepted
+- 📚 **Enhanced Help System**: Comprehensive `/help` command with detailed guides
+- 🔧 **Improved Error Handling**: Better user feedback for invalid inputs
+- 🎯 **Word Type Preservation**: Maintains correct grammatical forms (adjectives, verbs, nouns)
+- 🔄 **Retry Logic**: Users can immediately correct mistakes during word addition
+
+---
 
 ## ✨ Features
 
 ### 🎯 Core Functionality
 - **Smart Word Addition**: AI-powered word analysis with automatic CEFR level classification
+- **German Language Validation**: Ensures only authentic German words are accepted
 - **Spaced Repetition Algorithm**: Intelligent word selection based on review frequency and performance
 - **Interactive Review Sessions**: Step-by-step vocabulary practice with examples and contextual paragraphs
 - **Vocabulary Management**: Personal word list with easy removal and organization by CEFR levels
+- **Comprehensive Help System**: Built-in `/help` command with detailed usage instructions
 
 ### 📊 Analytics & Community
 - **Community Statistics**: View most popular words across all users by CEFR level
@@ -31,8 +59,10 @@ A smart Telegram bot designed to help users learn German vocabulary through spac
 
 ### 🤖 AI Integration
 - **Groq AI Integration**: Automatic word translation and CEFR level estimation
+- **Language Detection**: Advanced AI validation to ensure German-only vocabulary
+- **Word Type Preservation**: Maintains correct grammatical forms (adjectives stay adjectives, etc.)
 - **Context Generation**: AI-generated example sentences and paragraphs using learned vocabulary
-- **Smart Word Processing**: Handles various input formats and provides accurate translations
+- **Smart Error Handling**: Graceful handling of non-German inputs with helpful feedback
 
 ## 🔧 Prerequisites
 
@@ -77,7 +107,7 @@ Create a `config.json` file in the project root:
 ```json
 {
   "BOT_TOKEN": "your_telegram_bot_token_here",
-  "GROQ_API_KEY": "your_groq_api_key_here"
+  "AI_TOKEN": "your_groq_api_key_here"
 }
 ```
 
@@ -99,15 +129,16 @@ Create a `config.json` file in the project root:
 
 1. Start a conversation with your bot on Telegram
 2. Send `/start` to register and get welcome message
-3. Use `/add_word` to begin building your vocabulary
-4. Practice with `/review_words` when you have 5+ words
-5. Manage your vocabulary with `/my_words`
-6. Check community stats with `/top_words`
+3. Use `/help` to see all available commands and features
+4. Use `/add_word` to begin building your vocabulary (German words only!)
+5. Practice with `/review_words` when you have 5+ words
+6. Manage your vocabulary with `/my_words`
+7. Check community stats with `/top_words`
 
 ### Typical Workflow
 
 ```
-1. Add words → 2. Review regularly → 3. Track progress → 4. Expand vocabulary
+1. Learn commands (/help) → 2. Add German words → 3. Review regularly → 4. Track progress → 5. Expand vocabulary
 ```
 
 ## 🤖 Bot Commands
@@ -115,17 +146,50 @@ Create a `config.json` file in the project root:
 | Command | Description | Requirements |
 |---------|-------------|--------------|
 | `/start` | Register/welcome message | None |
-| `/add_word` | Add new word to vocabulary | None |
+| `/help` | Show comprehensive command guide and usage tips | None |
+| `/add_word` | Add new German word to vocabulary | German words only |
 | `/review_words` | Start interactive review session | 5+ words in vocabulary |
 | `/my_words` | View and manage personal vocabulary | None |
 | `/top_words` | View community word statistics | None |
+| `/cancel` | Cancel current conversation (during word addition) | Active conversation |
+
+### 🔥 New Features
+
+#### 🇩🇪 German Language Validation
+- **Smart Detection**: AI automatically detects and rejects non-German words
+- **Helpful Feedback**: Clear messages guide users to enter German vocabulary
+- **Retry Logic**: Users can immediately try again with correct input
+- **Examples**: Bot explains what constitutes a valid German word
+
+#### 📚 Enhanced Help System
+- **Comprehensive Guide**: Detailed explanations of all features
+- **Getting Started Tutorial**: Step-by-step instructions for new users
+- **CEFR Level Guide**: Understanding of difficulty levels with color coding
+- **Learning Tips**: Best practices for effective vocabulary acquisition
 
 ### Interactive Features
 
 - **Button-based confirmations** for word additions
+- **German language validation** with immediate feedback
 - **Step-by-step review process** with examples and paragraphs
 - **Vocabulary management interface** with easy word removal
 - **CEFR level organization** (A1, A2, B1, B2, C1, C2)
+- **Retry functionality** for incorrect inputs
+- **Comprehensive help system** accessible anytime
+
+### 🎯 Language Learning Features
+
+#### Word Type Preservation
+- **Adjectives stay adjectives** (schnell → schnell, not Schnelligkeit)
+- **Nouns include articles** (das Haus, der Mann, die Frau)
+- **Verbs in infinitive form** (laufen, sprechen, haben)
+- **Accurate translations** for each grammatical category
+
+#### Learning Methodology
+- **Spaced Repetition**: Words appear based on your mastery level
+- **Contextual Learning**: See words in sentences and paragraphs
+- **Progressive Difficulty**: CEFR levels from A1 (beginner) to C2 (advanced)
+- **Community Learning**: Discover popular words other learners are studying
 
 ## 📁 Project Structure
 
@@ -205,10 +269,19 @@ The bot includes comprehensive logging for monitoring and debugging:
 
 3. **AI Agent** (`agent.py`)
    - Groq API integration
-   - Word processing and translation
-   - Content generation
+   - German language detection and validation
+   - Word processing and translation with grammatical accuracy
+   - Content generation for examples and paragraphs
 
 ### Key Algorithms
+
+**German Language Validation**
+```python
+# AI validates input language before processing
+if ai_response.strip().lower() == "not german":
+    # Provide helpful feedback and retry opportunity
+    return WORD  # Keep conversation active
+```
 
 **Spaced Repetition Scoring**
 ```python
@@ -220,6 +293,7 @@ score = base_weight / (1 + review_count) * time_decay_factor
 - Considers time since last review
 - Ensures vocabulary diversity
 - Prevents duplicate selections
+- Maintains grammatical accuracy
 
 ## 🔄 Development Workflow
 
@@ -228,9 +302,10 @@ score = base_weight / (1 + review_count) * time_decay_factor
 1. **Database changes**: Update `database.py` and schema
 2. **Bot commands**: Add handlers in `bot.py`
 3. **AI integration**: Extend `agent.py` for new AI features
-4. **Testing**: Test with various user scenarios
-5. **Logging**: Add appropriate log statements
-6. **Documentation**: Update README and comments
+4. **Language validation**: Ensure proper German language handling
+5. **Testing**: Test with various user scenarios including edge cases
+6. **Logging**: Add appropriate log statements for monitoring
+7. **Documentation**: Update README and comments
 
 ### Code Style
 
@@ -274,8 +349,24 @@ For issues, questions, or feature requests:
 3. Include relevant log entries for bug reports
 4. Provide steps to reproduce problems
 
+### 🐛 Common Issues
+
+**"Word not recognized as German"**
+- Ensure you're entering actual German words
+- Try different spellings or word forms
+- Check that special characters are included (ä, ö, ü, ß)
+
+**"Not enough words for review"**
+- Add at least 5 words using `/add_word`
+- Each word must be confirmed and saved to your vocabulary
+
+**Bot not responding**
+- Check if the bot is online
+- Try `/start` to reinitialize your session
+- Contact support if issues persist
+
 ---
 
 **Happy Learning! 🎓📚**
 
-*Vocab Buddy - Making German vocabulary learning interactive and fun!*
+*Vocab Buddy - Making German vocabulary learning interactive, accurate, and fun!*
