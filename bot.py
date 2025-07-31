@@ -8,6 +8,8 @@ from agent import GroqClient
 from datetime import datetime
 import logging
 import os
+import random
+import asyncio
 
 
 # Load the bot token from the config file
@@ -47,6 +49,7 @@ WORD, MEANING = range(2)
 SHOW_WORDS, SHOW_EXAMPLES, SHOW_PARAGRAPH = range(3, 6)
 MANAGE_VOCAB = range(6, 7)
 ADMIN_MESSAGE = range(7, 8)
+QUIZ_ANSWER = range(8, 9)
 
 # Helper function to check if user is admin
 def is_admin(user_id):
@@ -103,6 +106,12 @@ Welcome to Vocab Buddy! Here's everything you need to know to get started with i
    • Shows word list → example sentences → contextual paragraph
    • Tracks your review progress automatically
 
+🧠 <b>/quiz</b> - Test your knowledge with a vocabulary quiz (minimum 4 words needed)
+   • 5 multiple-choice questions about your German words
+   • Choose the correct English translation from 4 options
+   • Get a score and review your performance
+   • Track your learning progress with immediate feedback
+
 📚 <b>/my_words</b> - View and manage your vocabulary collection
    • See all your words organized by CEFR levels (A1-C2)
    • View review statistics for each word
@@ -118,22 +127,26 @@ Welcome to Vocab Buddy! Here's everything you need to know to get started with i
 
 1️⃣ Use <b>/add_word</b> to build your vocabulary (aim for at least 5 words)
 2️⃣ Practice with <b>/review_words</b> to reinforce learning
-3️⃣ Check your progress with <b>/my_words</b>
-4️⃣ Discover new words with <b>/top_words</b>
+3️⃣ Test yourself with <b>/quiz</b> to check your knowledge
+4️⃣ Check your progress with <b>/my_words</b>
+5️⃣ Discover new words with <b>/top_words</b>
 
 📈 <b>LEARNING FEATURES:</b>
 
 🔄 <b>Spaced Repetition:</b> Words are reviewed based on how well you know them
 🎯 <b>CEFR Levels:</b> Words are categorized from A1 (beginner) to C2 (advanced)
 📝 <b>Contextual Learning:</b> See words in example sentences and paragraphs
-📊 <b>Progress Tracking:</b> Monitor your review history and learning stats
+🧠 <b>Interactive Quizzes:</b> Test your knowledge with multiple-choice questions
+📊 <b>Progress Tracking:</b> Monitor your review history and quiz scores
 
 💡 <b>TIPS FOR SUCCESS:</b>
 
 • Add words regularly to build a diverse vocabulary
 • Review consistently to improve retention
+• Take quizzes frequently to test your knowledge
 • Read the example sentences and paragraphs carefully
 • Don't rush - take time to understand each word in context
+• Use quiz results to identify words that need more practice
 • Remove words you've mastered to focus on challenging ones
 
 🎓 <b>CEFR LEVEL GUIDE:</b>
@@ -144,7 +157,7 @@ Welcome to Vocab Buddy! Here's everything you need to know to get started with i
 🔴 C1 - Advanced (sophisticated vocabulary)
 🟣 C2 - Proficient (near-native level expressions)
 
-Ready to start learning? Try <b>/add_word</b> to add your first German word! 🚀
+Ready to start learning? Try <b>/add_word</b> to add your first German word, then test yourself with <b>/quiz</b>! 🚀
 
 <i>Need more help? Feel free to explore the commands and see how they work!</i>
 """
@@ -280,6 +293,33 @@ async def button_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if query.data in ["send_broadcast", "cancel_broadcast"]:
         return await admin_handle_broadcast_callback(update, context)
     
+    # Handle quiz callbacks
+    if query.data.startswith("quiz_"):
+        if query.data == "quiz_restart":
+            logger.info(f"🔄 User {username} restarting quiz")
+            # Clean up any existing quiz data first
+            context.user_data.pop('quiz_words', None)
+            context.user_data.pop('all_words', None)
+            context.user_data.pop('quiz_current', None)
+            context.user_data.pop('quiz_score', None)
+            context.user_data.pop('quiz_answers', None)
+            context.user_data.pop('quiz_correct_answer', None)
+            context.user_data.pop('quiz_correct_translation', None)
+            
+            # Start new quiz
+            return await quiz_vocabulary(update, context)
+        elif query.data == "review_words_from_quiz":
+            # This is now handled by the review conversation handler
+            return
+        else:
+            # Handle quiz answer (only if it's a numbered answer)
+            try:
+                answer_num = int(query.data.replace("quiz_", ""))
+                if 0 <= answer_num <= 3:  # Valid answer range
+                    return await handle_quiz_answer(update, context)
+            except ValueError:
+                pass  # Not a quiz answer, continue to other handlers
+    
     # Handle review conversation callbacks
     if query.data == "continue_examples":
         logger.info(f"📚 User {username} continuing to examples")
@@ -362,12 +402,16 @@ async def review_words(update: Update, context: ContextTypes.DEFAULT_TYPE):
     
     if len(user_words) < 5:
         logger.warning(f"⚠️ User {username} has insufficient words for review ({len(user_words)} < 5)")
-        await update.message.reply_text(
-            "🚦 <b>Not enough words!</b>\n\n"
-            "You need at least <b>5 words</b> in your vocabulary to start a review session. "
-            "Add more words using <b>/add_word</b> and come back soon! 💪📚",
-            parse_mode="HTML"
-        )
+        
+        error_msg = ("🚦 <b>Not enough words!</b>\n\n"
+                    "You need at least <b>5 words</b> in your vocabulary to start a review session. "
+                    "Add more words using <b>/add_word</b> and come back soon! 💪📚")
+        
+        # Handle both message and callback query
+        if hasattr(update, 'callback_query') and update.callback_query:
+            await update.callback_query.edit_message_text(error_msg, parse_mode="HTML")
+        else:
+            await update.message.reply_text(error_msg, parse_mode="HTML")
         return ConversationHandler.END
     
     words_df = db_manager.choose_words(user_id)
@@ -402,11 +446,13 @@ async def review_words(update: Update, context: ContextTypes.DEFAULT_TYPE):
     ]
     markup = InlineKeyboardMarkup(reply_keyboard)
     
-    await update.message.reply_text(
-        reply_text + "\n\n📖 <b>Take your time to review these words. Click continue when you're ready to see example sentences!</b>",
-        reply_markup=markup,
-        parse_mode="HTML"
-    )
+    final_text = reply_text + "\n\n📖 <b>Take your time to review these words. Click continue when you're ready to see example sentences!</b>"
+    
+    # Handle both message and callback query
+    if hasattr(update, 'callback_query') and update.callback_query:
+        await update.callback_query.edit_message_text(final_text, reply_markup=markup, parse_mode="HTML")
+    else:
+        await update.message.reply_text(final_text, reply_markup=markup, parse_mode="HTML")
     return SHOW_EXAMPLES
 
 async def show_examples(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -624,6 +670,75 @@ async def my_words(update: Update, context: ContextTypes.DEFAULT_TYPE):
     
     await update.message.reply_text(reply_text, reply_markup=markup, parse_mode="HTML")
 
+async def my_words_from_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """Show user's vocabulary list from callback query (used in quiz completion)"""
+    query = update.callback_query
+    user_id = update.effective_user.id
+    username = update.effective_user.username
+    
+    logger.info(f"📚 MY_WORDS (from callback) command from user {username} (ID: {user_id})")
+    
+    user_words = db_manager.fetch_all('words_users', where_clause='user_id', where_args=[user_id])
+    
+    if not user_words:
+        await query.edit_message_text(
+            "📚 <b>Your vocabulary is empty!</b>\n\n"
+            "Start adding words using <b>/add_word</b> to build your vocabulary! 💪📖",
+            reply_markup=None,
+            parse_mode="HTML"
+        )
+        return
+    
+    # Get word details for each word in user's collection
+    words_info = []
+    for user_word in user_words:
+        word_id = user_word[2]
+        word_data = db_manager.fetch_all('words', where_clause='id', where_args=[word_id])
+        if word_data:
+            word_db_row = word_data[0]
+            word_text = word_db_row[1]
+            translation = word_db_row[2]
+            cefr_level = word_db_row[3]
+            review_count = user_word[3] if len(user_word) > 3 else 0
+            words_info.append((word_id, word_text, translation, cefr_level, review_count))
+    
+    words_info.sort(key=lambda x: x[1].lower())
+    reply_text = f"📚 <b>Your Vocabulary ({len(words_info)} words)</b>\n\n"
+    
+    # Group by CEFR level
+    level_groups = {}
+    for word_info in words_info:
+        level = word_info[3]
+        if level not in level_groups:
+            level_groups[level] = []
+        level_groups[level].append(word_info)
+    
+    # Define level order and emojis
+    level_order = ['A1', 'A2', 'B1', 'B2', 'C1', 'C2']
+    level_emojis = {
+        'A1': '🟢',
+        'A2': '🔵', 
+        'B1': '🟡',
+        'B2': '🟠',
+        'C1': '🔴',
+        'C2': '🟣'
+    }
+    
+    for level in level_order:
+        if level in level_groups:
+            emoji = level_emojis.get(level, '⭐')
+            reply_text += f"{emoji} <b>{level} Level:</b>\n"
+            
+            for word_info in level_groups[level]:
+                word_id, word_text, translation, cefr_level, review_count = word_info
+                reply_text += f"  • <b>{word_text}</b> - <i>{translation}</i> (reviewed {review_count} times)\n"
+            
+            reply_text += "\n"
+    
+    reply_text += "💡 <i>Keep studying these words to improve your German!</i>"
+    
+    await query.edit_message_text(reply_text, reply_markup=None, parse_mode="HTML")
+
 async def manage_vocabulary(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """Show vocabulary management interface with remove options"""
     query = update.callback_query
@@ -787,6 +902,286 @@ async def handle_word_removal(update: Update, context: ContextTypes.DEFAULT_TYPE
                     parse_mode="HTML"
                 )
             return ConversationHandler.END
+    
+    return ConversationHandler.END
+
+
+async def quiz_vocabulary(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """Start a vocabulary quiz for the user"""
+    user_id = update.effective_user.id
+    username = update.effective_user.username
+    
+    logger.info(f"🧠 QUIZ_VOCABULARY command from user {username} (ID: {user_id})")
+    
+    # Get user's words
+    user_words = db_manager.fetch_all('words_users', where_clause='user_id', where_args=[user_id])
+    logger.info(f"📊 User {username} has {len(user_words)} words for quiz")
+    
+    if len(user_words) < 4:
+        logger.warning(f"⚠️ User {username} has insufficient words for quiz ({len(user_words)} < 4)")
+        
+        error_msg = ("🧠 <b>Not enough words for quiz!</b>\n\n"
+                    "You need at least <b>4 words</b> in your vocabulary to start a quiz. "
+                    "Add more words using <b>/add_word</b> and come back to test your knowledge! 💪📚")
+        
+        # Handle both message and callback query
+        if hasattr(update, 'callback_query') and update.callback_query:
+            await update.callback_query.edit_message_text(error_msg, parse_mode="HTML")
+        else:
+            await update.message.reply_text(error_msg, parse_mode="HTML")
+        return ConversationHandler.END
+    
+    # Get detailed word information
+    words_info = []
+    for user_word in user_words:
+        word_id = user_word[2]  # word_id from words_users table
+        word_data = db_manager.fetch_all('words', where_clause='id', where_args=[word_id])
+        if word_data:
+            word_db_row = word_data[0]
+            word_text = word_db_row[1]  # word
+            translation = word_db_row[2]  # translation
+            cefr_level = word_db_row[3]  # cefr_level
+            words_info.append((word_id, word_text, translation, cefr_level))
+    
+    if len(words_info) < 4:
+        error_msg = ("🧠 <b>Not enough valid words for quiz!</b>\n\n"
+                    "Please add more words to your vocabulary and try again! 📚")
+        
+        # Handle both message and callback query
+        if hasattr(update, 'callback_query') and update.callback_query:
+            await update.callback_query.edit_message_text(error_msg, parse_mode="HTML")
+        else:
+            await update.message.reply_text(error_msg, parse_mode="HTML")
+        return ConversationHandler.END
+    
+    # Randomly select 5 words for the quiz (or less if user has fewer words)
+    quiz_words = random.sample(words_info, min(5, len(words_info)))
+    
+    # Initialize quiz data
+    context.user_data['quiz_words'] = quiz_words
+    context.user_data['all_words'] = words_info  # For generating wrong answers
+    context.user_data['quiz_current'] = 0
+    context.user_data['quiz_score'] = 0
+    context.user_data['quiz_answers'] = []
+    
+    logger.info(f"🎯 Starting quiz with {len(quiz_words)} questions for user {username}")
+    
+    start_msg = ("🧠 <b>Vocabulary Quiz Started!</b>\n\n"
+                f"You'll be tested on <b>{len(quiz_words)} German words</b> from your vocabulary.\n\n"
+                "For each word, choose the correct English translation from 4 options.\n\n"
+                "🎯 <b>Ready?</b> Let's begin! 💪")
+    
+    # Handle both message and callback query
+    if hasattr(update, 'callback_query') and update.callback_query:
+        await update.callback_query.edit_message_text(start_msg, parse_mode="HTML")
+    else:
+        await update.message.reply_text(start_msg, parse_mode="HTML")
+    
+    # Start first question
+    return await show_quiz_question(update, context)
+
+async def show_quiz_question(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """Show the current quiz question"""
+    quiz_words = context.user_data['quiz_words']
+    all_words = context.user_data['all_words']
+    current_index = context.user_data['quiz_current']
+    
+    if current_index >= len(quiz_words):
+        # Quiz completed
+        return await complete_quiz(update, context)
+    
+    current_word = quiz_words[current_index]
+    word_id, german_word, correct_translation, cefr_level = current_word
+    
+    # Generate 3 wrong answers from other words
+    other_words = [w for w in all_words if w[0] != word_id]  # Exclude current word
+    wrong_answers = random.sample(other_words, min(3, len(other_words)))
+    wrong_translations = [w[2] for w in wrong_answers]  # Get translations
+    
+    # If we don't have enough wrong answers, pad with generic ones
+    while len(wrong_translations) < 3:
+        generic_answers = ["to run", "house", "beautiful", "to eat", "car", "book", "happy", "to work"]
+        wrong_translations.append(random.choice(generic_answers))
+    
+    # Create options list with correct answer
+    options = [correct_translation] + wrong_translations[:3]
+    random.shuffle(options)  # Randomize order
+    
+    # Find the position of correct answer after shuffling
+    correct_position = options.index(correct_translation)
+    
+    # Store correct answer info
+    context.user_data['quiz_correct_answer'] = correct_position
+    context.user_data['quiz_correct_translation'] = correct_translation
+    
+    # Create inline keyboard with options
+    keyboard = []
+    option_letters = ['A', 'B', 'C', 'D']
+    for i, option in enumerate(options):
+        keyboard.append([InlineKeyboardButton(f"{option_letters[i]}) {option}", callback_data=f"quiz_{i}")])
+    
+    markup = InlineKeyboardMarkup(keyboard)
+    
+    question_number = current_index + 1
+    total_questions = len(quiz_words)
+    
+    question_text = f"🧠 <b>Quiz Question {question_number}/{total_questions}</b>\n\n"
+    question_text += f"🇩🇪 <b>German word:</b> <i>{german_word}</i>\n"
+    question_text += f"🎯 <b>Level:</b> {cefr_level}\n\n"
+    question_text += "❓ <b>What does this word mean in English?</b>\n\n"
+    question_text += "Choose the correct answer:"
+    
+    if hasattr(update, 'callback_query') and update.callback_query:
+        await update.callback_query.edit_message_text(
+            question_text,
+            reply_markup=markup,
+            parse_mode="HTML"
+        )
+    else:
+        await update.message.reply_text(
+            question_text,
+            reply_markup=markup,
+            parse_mode="HTML"
+        )
+    
+    return QUIZ_ANSWER
+
+async def handle_quiz_answer(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """Handle user's quiz answer"""
+    query = update.callback_query
+    await query.answer()
+    
+    user_id = update.effective_user.id
+    username = update.effective_user.username
+    
+    # Only handle numbered quiz answers
+    if not query.data.startswith("quiz_"):
+        return
+    
+    try:
+        selected_answer = int(query.data.replace("quiz_", ""))
+    except ValueError:
+        # Not a numbered answer, ignore
+        return
+    
+    # Make sure we have quiz data
+    if 'quiz_correct_answer' not in context.user_data:
+        logger.warning(f"⚠️ Quiz answer received but no quiz data for user {username}")
+        return
+    
+    correct_answer = context.user_data['quiz_correct_answer']
+    correct_translation = context.user_data['quiz_correct_translation']
+    
+    quiz_words = context.user_data['quiz_words']
+    current_index = context.user_data['quiz_current']
+    current_word = quiz_words[current_index]
+    german_word = current_word[1]
+    
+    is_correct = selected_answer == correct_answer
+    
+    if is_correct:
+        context.user_data['quiz_score'] += 1
+        result_emoji = "✅"
+        result_text = "Correct!"
+        logger.info(f"✅ Quiz: User {username} answered correctly - {german_word}")
+    else:
+        result_emoji = "❌"
+        result_text = "Incorrect!"
+        logger.info(f"❌ Quiz: User {username} answered incorrectly - {german_word}")
+    
+    # Store answer for final results
+    context.user_data['quiz_answers'].append({
+        'word': german_word,
+        'correct': is_correct,
+        'correct_answer': correct_translation
+    })
+    
+    # Show result
+    feedback_text = f"{result_emoji} <b>{result_text}</b>\n\n"
+    feedback_text += f"🇩🇪 <b>{german_word}</b> = <i>{correct_translation}</i>"
+    
+    await query.edit_message_text(feedback_text, parse_mode="HTML")
+    
+    # Move to next question after a brief delay
+    context.user_data['quiz_current'] += 1
+    
+    # Wait a moment then show next question
+    await asyncio.sleep(2)
+    
+    return await show_quiz_question(update, context)
+
+async def complete_quiz(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """Complete the quiz and show results"""
+    user_id = update.effective_user.id
+    username = update.effective_user.username
+    
+    score = context.user_data['quiz_score']
+    total_questions = len(context.user_data['quiz_words'])
+    quiz_answers = context.user_data['quiz_answers']
+    
+    percentage = (score / total_questions) * 100
+    
+    logger.info(f"🎯 Quiz completed: User {username} scored {score}/{total_questions} ({percentage:.1f}%)")
+    
+    # Determine performance emoji and message
+    if percentage >= 90:
+        performance_emoji = "🏆"
+        performance_msg = "Outstanding! You're a vocabulary master!"
+    elif percentage >= 80:
+        performance_emoji = "🥇"
+        performance_msg = "Excellent work! You know your words well!"
+    elif percentage >= 70:
+        performance_emoji = "🥈"
+        performance_msg = "Good job! Keep practicing to improve!"
+    elif percentage >= 60:
+        performance_emoji = "🥉"
+        performance_msg = "Not bad! Review your words and try again!"
+    else:
+        performance_emoji = "📚"
+        performance_msg = "Keep studying! Practice makes perfect!"
+    
+    # Create results text
+    results_text = f"🧠 <b>Quiz Complete!</b> {performance_emoji}\n\n"
+    results_text += f"📊 <b>Your Score:</b> {score}/{total_questions} ({percentage:.1f}%)\n\n"
+    results_text += f"💭 <i>{performance_msg}</i>\n\n"
+    results_text += "📝 <b>Question Review:</b>\n"
+    
+    for i, answer in enumerate(quiz_answers, 1):
+        emoji = "✅" if answer['correct'] else "❌"
+        results_text += f"{i}. {emoji} <b>{answer['word']}</b> = <i>{answer['correct_answer']}</i>\n"
+    
+    results_text += "\n🎯 <b>Keep learning!</b> Use /quiz again to test yourself anytime!"
+    
+    # Add buttons for next actions
+    keyboard = [
+        [
+            InlineKeyboardButton("🔄 Take Quiz Again", callback_data="quiz_restart"),
+            InlineKeyboardButton("📚 Review Words", callback_data="review_words_from_quiz")
+        ]
+    ]
+    markup = InlineKeyboardMarkup(keyboard)
+    
+    if hasattr(update, 'callback_query') and update.callback_query:
+        await update.callback_query.edit_message_text(
+            results_text,
+            reply_markup=markup,
+            parse_mode="HTML"
+        )
+    else:
+        await update.message.reply_text(
+            results_text,
+            reply_markup=markup,
+            parse_mode="HTML"
+        )
+    
+    # Clean up quiz data
+    context.user_data.pop('quiz_words', None)
+    context.user_data.pop('all_words', None)
+    context.user_data.pop('quiz_current', None)
+    context.user_data.pop('quiz_score', None)
+    context.user_data.pop('quiz_answers', None)
+    context.user_data.pop('quiz_correct_answer', None)
+    context.user_data.pop('quiz_correct_translation', None)
     
     return ConversationHandler.END
 
@@ -1170,7 +1565,10 @@ def main():
     )
 
     review_conv = ConversationHandler(
-        entry_points=[CommandHandler("review_words", review_words)],
+        entry_points=[
+            CommandHandler("review_words", review_words),
+            CallbackQueryHandler(review_words, pattern="^review_words_from_quiz$")
+        ],
         states={
             SHOW_EXAMPLES: [CallbackQueryHandler(button_callback, pattern="^continue_examples$")],
             SHOW_PARAGRAPH: [CallbackQueryHandler(button_callback, pattern="^continue_paragraph$")],
@@ -1190,9 +1588,19 @@ def main():
         per_message=False,
     )
 
+    quiz_conv = ConversationHandler(
+        entry_points=[CommandHandler("quiz", quiz_vocabulary)],
+        states={
+            QUIZ_ANSWER: [CallbackQueryHandler(handle_quiz_answer, pattern="^quiz_[0-3]$")],
+        },
+        fallbacks=[CommandHandler("cancel", lambda update, context: ConversationHandler.END)],
+        per_message=False,
+    )
+
     app.add_handler(add_word_conv)
     app.add_handler(review_conv)
     app.add_handler(vocab_manage_conv)
+    app.add_handler(quiz_conv)
     
     # Add general callback handler last (less specific)
     app.add_handler(CallbackQueryHandler(button_callback))
