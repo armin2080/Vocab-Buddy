@@ -39,6 +39,8 @@ Simply search for `@vocabularyBuddy_bot` on Telegram or use the direct link: htt
 - 🔧 **Improved Error Handling**: Better user feedback for invalid inputs
 - 🎯 **Word Type Preservation**: Maintains correct grammatical forms (adjectives, verbs, nouns)
 - 🔄 **Retry Logic**: Users can immediately correct mistakes during word addition
+- 👑 **Admin Management System**: Complete admin toolkit with user management and broadcast messaging
+- 📢 **Broadcast Announcements**: Admins can send announcements to all users with delivery tracking
 
 ---
 
@@ -56,6 +58,14 @@ Simply search for `@vocabularyBuddy_bot` on Telegram or use the direct link: htt
 - **Community Statistics**: View most popular words across all users by CEFR level
 - **Personal Progress Tracking**: Monitor review counts and learning progress
 - **Usage Analytics**: Comprehensive logging system for performance monitoring
+
+### 👑 Admin & Management
+- **Admin Access Control**: Secure admin-only command system with proper authorization
+- **User Management**: Complete user listing with registration dates and vocabulary statistics
+- **Bot Analytics**: Comprehensive statistics including active users, word counts, and review metrics
+- **Broadcast Messaging**: Send announcements to all users with delivery tracking and reporting
+- **Database Management**: Automatic schema upgrades and data integrity maintenance
+- **Comprehensive Logging**: All admin actions logged for security and audit purposes
 
 ### 🤖 AI Integration
 - **Groq AI Integration**: Automatic word translation and CEFR level estimation
@@ -107,7 +117,8 @@ Create a `config.json` file in the project root:
 ```json
 {
   "BOT_TOKEN": "your_telegram_bot_token_here",
-  "AI_TOKEN": "your_groq_api_key_here"
+  "AI_TOKEN": "your_groq_api_key_here",
+  "ADMIN_ID": 123456789
 }
 ```
 
@@ -122,6 +133,12 @@ Create a `config.json` file in the project root:
    - Visit [Groq Console](https://console.groq.com/)
    - Sign up for an account
    - Generate an API key in the dashboard
+
+3. **Admin ID (Optional)**:
+   - Get your Telegram user ID to enable admin features
+   - Start a chat with [@userinfobot](https://t.me/userinfobot) to find your ID
+   - Add this ID to enable admin commands and broadcast functionality
+   - If not set, admin features will be disabled
 
 ## 📖 Usage
 
@@ -153,7 +170,27 @@ Create a `config.json` file in the project root:
 | `/top_words` | View community word statistics | None |
 | `/cancel` | Cancel current conversation (during word addition) | Active conversation |
 
-### 🔥 New Features
+### � Admin Commands
+
+*Available only for configured administrators*
+
+| Command | Description | Requirements |
+|---------|-------------|--------------|
+| `/admin_help` | Show admin command help and documentation | Admin access |
+| `/admin_users` | List all registered users with detailed statistics | Admin access |
+| `/admin_stats` | Display comprehensive bot usage analytics | Admin access |
+| `/admin_broadcast` | Send announcements to all users | Admin access |
+
+#### 📢 Admin Broadcast Features
+- **Message Composition**: Interactive message creation with preview
+- **HTML Formatting Support**: Rich text formatting for announcements
+- **Delivery Tracking**: Real-time progress monitoring during broadcast
+- **Comprehensive Reporting**: Detailed success/failure statistics
+- **Professional Formatting**: Messages include admin header and signature
+- **Cancellation Option**: Ability to cancel broadcast before sending
+- **Error Handling**: Graceful handling of blocked users and delivery failures
+
+### �🔥 New Features
 
 #### 🇩🇪 German Language Validation
 - **Smart Detection**: AI automatically detects and rejects non-German words
