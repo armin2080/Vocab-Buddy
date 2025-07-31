@@ -14,6 +14,7 @@ import os
 with open("config.json", "r") as f:
     config = json.load(f)
 TOKEN: Final = config["BOT_TOKEN"]
+ADMIN_ID: Final = config.get("ADMIN_ID", None)  # Optional admin ID
 
 # Set up logging
 logging.basicConfig(
@@ -29,6 +30,10 @@ logger = logging.getLogger(__name__)
 # Log startup
 logger.info("🚀 Vocab Buddy Bot Starting Up...")
 logger.info("📊 Loading configuration and initializing components...")
+if ADMIN_ID:
+    logger.info(f"👑 Admin functionality enabled for user ID: {ADMIN_ID}")
+else:
+    logger.info("⚠️ No admin ID configured - admin features disabled")
 
 # Start database manager and agent client
 groq_client = GroqClient()
@@ -41,6 +46,12 @@ logger.info("✅ Database Manager and Groq Client initialized successfully")
 WORD, MEANING = range(2)
 SHOW_WORDS, SHOW_EXAMPLES, SHOW_PARAGRAPH = range(3, 6)
 MANAGE_VOCAB = range(6, 7)
+ADMIN_MESSAGE = range(7, 8)
+
+# Helper function to check if user is admin
+def is_admin(user_id):
+    """Check if the user is an admin"""
+    return ADMIN_ID is not None and user_id == ADMIN_ID
 
 
 
@@ -136,6 +147,17 @@ Welcome to Vocab Buddy! Here's everything you need to know to get started with i
 Ready to start learning? Try <b>/add_word</b> to add your first German word! 🚀
 
 <i>Need more help? Feel free to explore the commands and see how they work!</i>
+"""
+    
+    # Add admin section if user is admin
+    if is_admin(user_id):
+        help_text += """
+
+👑 <b>ADMIN COMMANDS:</b>
+You have administrative access! Use these commands:
+• <b>/admin_help</b> - Show admin command help
+• <b>/admin_users</b> - List all users
+• <b>/admin_stats</b> - Show bot statistics
 """
     
     await update.message.reply_text(help_text, parse_mode="HTML")
@@ -253,6 +275,10 @@ async def button_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
     callback_data = query.data
     
     logger.info(f"🔘 Button callback '{callback_data}' from user {username} (ID: {user_id})")
+    
+    # Handle admin broadcast callbacks
+    if query.data in ["send_broadcast", "cancel_broadcast"]:
+        return await admin_handle_broadcast_callback(update, context)
     
     # Handle review conversation callbacks
     if query.data == "continue_examples":
@@ -765,6 +791,341 @@ async def handle_word_removal(update: Update, context: ContextTypes.DEFAULT_TYPE
     return ConversationHandler.END
 
 
+# ADMIN COMMANDS
+async def admin_users(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """Admin command to list all users"""
+    user_id = update.effective_user.id
+    username = update.effective_user.username
+    
+    logger.info(f"👑 ADMIN_USERS command from user {username} (ID: {user_id})")
+    
+    # Check if user is admin
+    if not is_admin(user_id):
+        logger.warning(f"🚫 Unauthorized admin access attempt from user {username} (ID: {user_id})")
+        await update.message.reply_text(
+            "🚫 <b>Access Denied</b>\n\n"
+            "You don't have permission to use admin commands.",
+            parse_mode="HTML"
+        )
+        return
+    
+    # Get all users from database
+    all_users = db_manager.fetch_all('users')
+    
+    if not all_users:
+        await update.message.reply_text(
+            "👑 <b>Admin - User List</b>\n\n"
+            "📭 No users found in the database.",
+            parse_mode="HTML"
+        )
+        return
+    
+    logger.info(f"👑 Admin {username} requested user list - {len(all_users)} users found")
+    
+    # Format user list
+    reply_text = f"👑 <b>Admin - User List ({len(all_users)} users)</b>\n\n"
+    
+    for idx, user in enumerate(all_users, 1):
+        user_db_id = user[0]  # Database ID
+        telegram_id = user[1]  # Telegram ID
+        db_username = user[2] if user[2] else "No username"  # Username
+        created_at = user[3] if len(user) > 3 else "Unknown"  # Created timestamp
+        
+        # Get user's word count
+        user_words = db_manager.fetch_all('words_users', where_clause='user_id', where_args=[telegram_id])
+        word_count = len(user_words)
+        
+        reply_text += f"<b>{idx}.</b> @{db_username}\n"
+        reply_text += f"   📱 Telegram ID: <code>{telegram_id}</code>\n"
+        reply_text += f"   📚 Words: {word_count}\n"
+        
+        # Format the created_at date safely
+        if created_at and created_at != 'Unknown':
+            try:
+                # Handle different timestamp formats
+                if len(created_at) > 10:
+                    join_date = created_at[:10]  # Take only the date part
+                else:
+                    join_date = created_at
+            except (TypeError, IndexError):
+                join_date = "Unknown"
+        else:
+            join_date = "Unknown"
+            
+        reply_text += f"   📅 Joined: {join_date}\n\n"
+        
+        # Split message if it gets too long (Telegram limit is 4096 characters)
+        if len(reply_text) > 3500:
+            await update.message.reply_text(reply_text, parse_mode="HTML")
+            reply_text = f"👑 <b>Admin - User List (continued)</b>\n\n"
+    
+    if reply_text.strip() != f"👑 <b>Admin - User List (continued)</b>\n\n":
+        await update.message.reply_text(reply_text, parse_mode="HTML")
+
+async def admin_stats(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """Admin command to show bot statistics"""
+    user_id = update.effective_user.id
+    username = update.effective_user.username
+    
+    logger.info(f"👑 ADMIN_STATS command from user {username} (ID: {user_id})")
+    
+    # Check if user is admin
+    if not is_admin(user_id):
+        logger.warning(f"🚫 Unauthorized admin access attempt from user {username} (ID: {user_id})")
+        await update.message.reply_text(
+            "🚫 <b>Access Denied</b>\n\n"
+            "You don't have permission to use admin commands.",
+            parse_mode="HTML"
+        )
+        return
+    
+    # Get statistics
+    all_users = db_manager.fetch_all('users')
+    all_words = db_manager.fetch_all('words')
+    all_user_words = db_manager.fetch_all('words_users')
+    
+    # Calculate total reviews
+    total_reviews = sum(row[3] if len(row) > 3 and row[3] else 0 for row in all_user_words)
+    
+    # Get active users (users with at least 1 word)
+    active_users = set()
+    for user_word in all_user_words:
+        active_users.add(user_word[1])  # user_id
+    
+    logger.info(f"👑 Admin {username} requested bot statistics")
+    
+    reply_text = f"👑 <b>Admin - Bot Statistics</b>\n\n"
+    reply_text += f"👥 <b>Total Users:</b> {len(all_users)}\n"
+    reply_text += f"🟢 <b>Active Users:</b> {len(active_users)}\n"
+    reply_text += f"📚 <b>Total Words in Database:</b> {len(all_words)}\n"
+    reply_text += f"🔗 <b>Total User-Word Connections:</b> {len(all_user_words)}\n"
+    reply_text += f"📖 <b>Total Reviews Completed:</b> {total_reviews}\n\n"
+    
+    # Average words per active user
+    if len(active_users) > 0:
+        avg_words = len(all_user_words) / len(active_users)
+        reply_text += f"📊 <b>Average Words per Active User:</b> {avg_words:.1f}\n"
+    
+    # Average reviews per word connection
+    if len(all_user_words) > 0:
+        avg_reviews = total_reviews / len(all_user_words)
+        reply_text += f"📈 <b>Average Reviews per Word:</b> {avg_reviews:.1f}\n"
+    
+    reply_text += f"\n⏰ <b>Report Generated:</b> {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}"
+    
+    await update.message.reply_text(reply_text, parse_mode="HTML")
+
+async def admin_help(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """Admin command to show available admin commands"""
+    user_id = update.effective_user.id
+    username = update.effective_user.username
+    
+    logger.info(f"👑 ADMIN_HELP command from user {username} (ID: {user_id})")
+    
+    # Check if user is admin
+    if not is_admin(user_id):
+        logger.warning(f"🚫 Unauthorized admin access attempt from user {username} (ID: {user_id})")
+        await update.message.reply_text(
+            "🚫 <b>Access Denied</b>\n\n"
+            "You don't have permission to use admin commands.",
+            parse_mode="HTML"
+        )
+        return
+    
+    help_text = """
+👑 <b>Admin Commands - Vocab Buddy</b>
+
+Welcome to the admin panel! Here are the available admin commands:
+
+📋 <b>USER MANAGEMENT:</b>
+• <b>/admin_users</b> - List all registered users with statistics
+• <b>/admin_stats</b> - Show comprehensive bot statistics
+
+📢 <b>COMMUNICATION:</b>
+• <b>/admin_broadcast</b> - Send announcement to all users
+
+❓ <b>HELP:</b>
+• <b>/admin_help</b> - Show this admin help message
+
+📊 <b>STATISTICS AVAILABLE:</b>
+• Total and active user counts
+• Word database size
+• Review completion statistics
+• User engagement metrics
+
+🔒 <b>SECURITY:</b>
+All admin commands are logged and require proper authorization.
+Only the configured admin can access these features.
+
+💡 <b>TIPS:</b>
+• Use /admin_stats for quick overview
+• Use /admin_users for detailed user information
+• All commands provide comprehensive logging
+
+<i>More admin features will be added in future updates!</i>
+"""
+    
+    await update.message.reply_text(help_text, parse_mode="HTML")
+
+async def admin_broadcast(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """Admin command to start broadcasting a message to all users"""
+    user_id = update.effective_user.id
+    username = update.effective_user.username
+    
+    logger.info(f"👑 ADMIN_BROADCAST command from user {username} (ID: {user_id})")
+    
+    # Check if user is admin
+    if not is_admin(user_id):
+        logger.warning(f"🚫 Unauthorized admin access attempt from user {username} (ID: {user_id})")
+        await update.message.reply_text(
+            "🚫 <b>Access Denied</b>\n\n"
+            "You don't have permission to use admin commands.",
+            parse_mode="HTML"
+        )
+        return ConversationHandler.END
+    
+    await update.message.reply_text(
+        "📢 <b>Admin Broadcast Message</b>\n\n"
+        "Please type the message you want to send to all users.\n\n"
+        "💡 <b>Tips:</b>\n"
+        "• Use HTML formatting if needed (<b>bold</b>, <i>italic</i>)\n"
+        "• Keep it concise and informative\n"
+        "• Type /cancel to abort\n\n"
+        "✍️ <i>Enter your message:</i>",
+        parse_mode="HTML"
+    )
+    return ADMIN_MESSAGE
+
+async def admin_receive_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """Receive and confirm admin broadcast message"""
+    user_id = update.effective_user.id
+    username = update.effective_user.username
+    message_text = update.message.text
+    
+    logger.info(f"👑 Admin {username} composed broadcast message")
+    
+    # Store the message in context
+    context.user_data['broadcast_message'] = message_text
+    
+    # Show preview with confirmation buttons
+    reply_keyboard = [
+        [
+            InlineKeyboardButton("✅ Send to All Users", callback_data="send_broadcast"),
+            InlineKeyboardButton("❌ Cancel", callback_data="cancel_broadcast")
+        ]
+    ]
+    markup = InlineKeyboardMarkup(reply_keyboard)
+    
+    preview_text = f"📢 <b>Broadcast Message Preview</b>\n\n"
+    preview_text += f"📝 <b>Message:</b>\n{message_text}\n\n"
+    preview_text += "🔍 <b>This message will be sent to ALL users.</b>\n"
+    preview_text += "Are you sure you want to proceed?"
+    
+    await update.message.reply_text(
+        preview_text,
+        reply_markup=markup,
+        parse_mode="HTML"
+    )
+    return ConversationHandler.END
+
+async def admin_handle_broadcast_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """Handle broadcast confirmation callbacks"""
+    query = update.callback_query
+    await query.answer()
+    
+    user_id = update.effective_user.id
+    username = update.effective_user.username
+    
+    if query.data == "cancel_broadcast":
+        logger.info(f"👑 Admin {username} cancelled broadcast")
+        await query.edit_message_text(
+            "❌ <b>Broadcast Cancelled</b>\n\n"
+            "The message was not sent to users.",
+            reply_markup=None,
+            parse_mode="HTML"
+        )
+        return
+    
+    elif query.data == "send_broadcast":
+        broadcast_message = context.user_data.get('broadcast_message')
+        if not broadcast_message:
+            await query.edit_message_text(
+                "❌ <b>Error</b>\n\n"
+                "No message found. Please try again.",
+                reply_markup=None,
+                parse_mode="HTML"
+            )
+            return
+        
+        logger.info(f"👑 Admin {username} confirmed broadcast - starting delivery")
+        
+        # Update the message to show broadcasting status
+        await query.edit_message_text(
+            "📡 <b>Broadcasting Message...</b>\n\n"
+            "Please wait while the message is being sent to all users.",
+            reply_markup=None,
+            parse_mode="HTML"
+        )
+        
+        # Get all users
+        all_users = db_manager.fetch_all('users')
+        
+        if not all_users:
+            await query.edit_message_text(
+                "📭 <b>No Users Found</b>\n\n"
+                "There are no users in the database to send the message to.",
+                reply_markup=None,
+                parse_mode="HTML"
+            )
+            return
+        
+        # Send message to all users
+        success_count = 0
+        failed_count = 0
+        
+        # Format the broadcast message with admin header
+        formatted_message = f"📢 <b>Announcement from Vocab Buddy</b>\n\n{broadcast_message}\n\n<i>— Admin Team</i>"
+        
+        for user in all_users:
+            telegram_id = user[1]  # Telegram ID
+            db_username = user[2] if user[2] else "Unknown"
+            
+            try:
+                # Send message to user
+                await context.bot.send_message(
+                    chat_id=telegram_id,
+                    text=formatted_message,
+                    parse_mode="HTML"
+                )
+                success_count += 1
+                logger.info(f"📤 Broadcast delivered to user {db_username} (ID: {telegram_id})")
+                
+            except Exception as e:
+                failed_count += 1
+                logger.warning(f"📤 Failed to deliver broadcast to user {db_username} (ID: {telegram_id}): {e}")
+        
+        # Report results
+        total_users = len(all_users)
+        logger.info(f"👑 Broadcast completed: {success_count}/{total_users} delivered, {failed_count} failed")
+        
+        result_text = f"✅ <b>Broadcast Complete!</b>\n\n"
+        result_text += f"📊 <b>Delivery Report:</b>\n"
+        result_text += f"👥 Total Users: {total_users}\n"
+        result_text += f"✅ Successfully Delivered: {success_count}\n"
+        result_text += f"❌ Failed Deliveries: {failed_count}\n\n"
+        
+        if failed_count > 0:
+            result_text += f"<i>Failed deliveries may be due to users blocking the bot or deactivated accounts.</i>\n\n"
+        
+        result_text += f"📝 <b>Message Sent:</b>\n{broadcast_message}"
+        
+        await query.edit_message_text(
+            result_text,
+            reply_markup=None,
+            parse_mode="HTML"
+        )
+
+
 def main():
     logger.info("🔧 Initializing Telegram Bot Application...")
     
@@ -778,6 +1139,24 @@ def main():
     app.add_handler(CommandHandler("help", help_command))
     app.add_handler(CommandHandler("top_words", top_words))
     app.add_handler(CommandHandler("my_words", my_words))
+    
+    # Add admin command handlers
+    if ADMIN_ID:
+        app.add_handler(CommandHandler("admin_users", admin_users))
+        app.add_handler(CommandHandler("admin_stats", admin_stats))
+        app.add_handler(CommandHandler("admin_help", admin_help))
+        
+        # Admin broadcast conversation handler
+        admin_broadcast_conv = ConversationHandler(
+            entry_points=[CommandHandler("admin_broadcast", admin_broadcast)],
+            states={
+                ADMIN_MESSAGE: [MessageHandler(filters.TEXT & ~filters.COMMAND, admin_receive_message)],
+            },
+            fallbacks=[CommandHandler("cancel", lambda update, context: ConversationHandler.END)],
+        )
+        app.add_handler(admin_broadcast_conv)
+        
+        logger.info("👑 Admin command handlers registered")
     
     logger.info("🔄 Setting up conversation handlers...")
     
