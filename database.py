@@ -55,7 +55,58 @@ class DatabaseManager:
     def __init__(self, db_name='vocab_buddy.db'):
         self.db_name = db_name
         self.conn = sqlite3.connect(self.db_name)
-        self.create_table()
+        self.initialize_tables()
+
+    def initialize_tables(self):
+        """Initialize all required tables with proper schema"""
+        # Create users table with created_at timestamp
+        self.create_table('users', [
+            'telegram_id INTEGER NOT NULL UNIQUE',
+            'username TEXT',
+            'created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP'
+        ])
+        
+        # Create words table
+        self.create_table('words', [
+            'word TEXT NOT NULL UNIQUE',
+            'translation TEXT NOT NULL',
+            'cefr_level TEXT NOT NULL',
+            'created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP'
+        ])
+        
+        # Create words_users junction table
+        self.create_table('words_users', [
+            'user_id INTEGER NOT NULL',
+            'word_id INTEGER NOT NULL',
+            'review_count INTEGER DEFAULT 0',
+            'last_reviewed TIMESTAMP',
+            'created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP',
+            'FOREIGN KEY (user_id) REFERENCES users (telegram_id)',
+            'FOREIGN KEY (word_id) REFERENCES words (id)',
+            'UNIQUE(user_id, word_id)'
+        ])
+        
+        # Check and add missing columns for existing databases
+        self.upgrade_schema()
+
+    def upgrade_schema(self):
+        """Add missing columns to existing tables"""
+        try:
+            # Check if created_at column exists in users table
+            cursor = self.conn.execute("PRAGMA table_info(users)")
+            columns = [column[1] for column in cursor.fetchall()]
+            
+            if 'created_at' not in columns:
+                # Add created_at column to existing users table
+                self.conn.execute("ALTER TABLE users ADD COLUMN created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP")
+                # Update existing records with current timestamp
+                self.conn.execute("UPDATE users SET created_at = CURRENT_TIMESTAMP WHERE created_at IS NULL")
+                self.conn.commit()
+                print("✅ Added created_at column to users table")
+                
+        except sqlite3.OperationalError as e:
+            # Table might not exist yet, which is fine
+            pass
 
     def create_table(self,table='users', columns=['telegram_id int NOT NULL', 'username TEXT NOT NULL']):
         prompt = f'CREATE TABLE IF NOT EXISTS {table} ( ID INTEGER PRIMARY KEY AUTOINCREMENT, '
