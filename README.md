@@ -41,6 +41,7 @@ Simply search for `@vocabularyBuddy_bot` on Telegram or use the direct link: htt
 - 🔄 **Retry Logic**: Users can immediately correct mistakes during word addition
 - 👑 **Admin Management System**: Complete admin toolkit with user management and broadcast messaging
 - 📢 **Broadcast Announcements**: Admins can send announcements to all users with delivery tracking
+- 🧠 **Interactive Quiz System**: New multiple-choice vocabulary quizzes with scoring and performance tracking
 
 ---
 
@@ -51,6 +52,7 @@ Simply search for `@vocabularyBuddy_bot` on Telegram or use the direct link: htt
 - **German Language Validation**: Ensures only authentic German words are accepted
 - **Spaced Repetition Algorithm**: Intelligent word selection based on review frequency and performance
 - **Interactive Review Sessions**: Step-by-step vocabulary practice with examples and contextual paragraphs
+- **Multiple-Choice Quizzes**: Test knowledge with randomized quiz questions and instant feedback
 - **Vocabulary Management**: Personal word list with easy removal and organization by CEFR levels
 - **Comprehensive Help System**: Built-in `/help` command with detailed usage instructions
 
@@ -166,6 +168,7 @@ Create a `config.json` file in the project root:
 | `/help` | Show comprehensive command guide and usage tips | None |
 | `/add_word` | Add new German word to vocabulary | German words only |
 | `/review_words` | Start interactive review session | 5+ words in vocabulary |
+| `/quiz` | Take vocabulary quiz with multiple-choice questions | 4+ words in vocabulary |
 | `/my_words` | View and manage personal vocabulary | None |
 | `/top_words` | View community word statistics | None |
 | `/cancel` | Cancel current conversation (during word addition) | Active conversation |
@@ -191,6 +194,16 @@ Create a `config.json` file in the project root:
 - **Error Handling**: Graceful handling of blocked users and delivery failures
 
 ### �🔥 New Features
+
+#### 🧠 Interactive Quiz System
+- **Multiple-Choice Questions**: Test knowledge with 4-option questions
+- **Randomized Question Order**: Different quiz experience each time
+- **Smart Wrong Answers**: Incorrect options come from user's other vocabulary words
+- **Performance Scoring**: Detailed scoring with percentage and performance feedback
+- **Instant Feedback**: Immediate confirmation of correct/incorrect answers
+- **Question Review**: Complete review of all questions and correct answers
+- **Progress Tracking**: Monitor quiz performance to identify learning gaps
+- **Flexible Length**: Adaptive quiz length based on vocabulary size (up to 5 questions)
 
 #### 🇩🇪 German Language Validation
 - **Smart Detection**: AI automatically detects and rejects non-German words
