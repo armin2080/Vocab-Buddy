@@ -289,6 +289,35 @@ async def button_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
     
     logger.info(f"🔘 Button callback '{callback_data}' from user {username} (ID: {user_id})")
     
+    # Handle add another word callbacks
+    if query.data == "add_another_word":
+        logger.info(f"➕ User {username} choosing to add another word")
+        await query.edit_message_text(
+            "📝 <b>Add Another Word</b>\n\n"
+            "Please enter the next German word you want to add:",
+            reply_markup=None,
+            parse_mode="HTML"
+        )
+        # Clear previous word data and restart conversation
+        context.user_data.clear()
+        return WORD
+    
+    elif query.data == "done_adding":
+        logger.info(f"✅ User {username} finished adding words")
+        await query.edit_message_text(
+            "✅ <b>Perfect!</b>\n\n"
+            "You've successfully added your words to the vocabulary! 🎉\n\n"
+            "Ready to practice? Try:\n"
+            "• <b>/review_words</b> - Practice with spaced repetition\n"
+            "• <b>/quiz</b> - Test your knowledge\n"
+            "• <b>/my_words</b> - View your vocabulary list\n\n"
+            "Keep learning! 💪📚",
+            reply_markup=None,
+            parse_mode="HTML"
+        )
+        return ConversationHandler.END
+
+
     # Handle admin broadcast callbacks
     if query.data in ["send_broadcast", "cancel_broadcast"]:
         return await admin_handle_broadcast_callback(update, context)
@@ -374,9 +403,19 @@ async def button_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
         
     if user_has_word:
         logger.warning(f"⚠️ User {username} already has word '{word}' in vocabulary")
+        # Add inline buttons for adding another word even when user already has it
+        reply_keyboard = [
+            [
+                InlineKeyboardButton("➕ Add Another Word", callback_data="add_another_word"),
+                InlineKeyboardButton("✅ Done", callback_data="done_adding")
+            ]
+        ]
+        markup = InlineKeyboardMarkup(reply_keyboard)
+        
         await query.edit_message_text(
-            f"⚠️ <b>You already have the word</b> <i>'{word}'</i> <b>in your vocabulary!</b> ✨\n\nTry adding a new word or use /add_word again.",
-            reply_markup=None,
+            f"⚠️ <b>You already have the word</b> <i>'{word}'</i> <b>in your vocabulary!</b> ✨\n\n"
+            "Would you like to add another word instead?",
+            reply_markup=markup,
             parse_mode="HTML"
         )
         return
@@ -384,11 +423,22 @@ async def button_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
         # Add word to user's collection
         db_manager.add_instance('words_users', columns=['user_id', 'word_id'], new_vals=[user_id, word_id])
         logger.info(f"🎉 Successfully added word '{word}' to user {username}'s vocabulary")
+        # Add inline buttons for adding another word
+        reply_keyboard = [
+            [
+                InlineKeyboardButton("➕ Add Another Word", callback_data="add_another_word"),
+                InlineKeyboardButton("✅ Done", callback_data="done_adding")
+            ]
+        ]
+        markup = InlineKeyboardMarkup(reply_keyboard)
+        
         await query.edit_message_text(
-            f"🎉 Great! The word <b>'{word}'</b> with translation <b>'{translation}'</b> has been added to your vocabulary! 🚀\n\nKeep learning! 📚",
-            reply_markup=None,
+            f"🎉 Great! The word <b>'{word}'</b> with translation <b>'{translation}'</b> has been added to your vocabulary! 🚀\n\n"
+            "Would you like to add another word?",
+            reply_markup=markup,
             parse_mode="HTML"
         )
+        return
 
 
 async def review_words(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -1557,7 +1607,10 @@ def main():
     
     # Add conversation handlers first (more specific)
     add_word_conv = ConversationHandler(
-        entry_points=[CommandHandler("add_word", add_word)],
+        entry_points=[
+            CommandHandler("add_word", add_word),
+            CallbackQueryHandler(button_callback, pattern="^add_another_word$")
+        ],
         states={
             WORD: [MessageHandler(filters.TEXT & ~filters.COMMAND, receive_word)],
         },
