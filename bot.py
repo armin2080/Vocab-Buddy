@@ -50,6 +50,7 @@ SHOW_WORDS, SHOW_EXAMPLES, SHOW_PARAGRAPH = range(3, 6)
 MANAGE_VOCAB = range(6, 7)
 ADMIN_MESSAGE = range(7, 8)
 QUIZ_ANSWER = range(8, 9)
+VERB_INPUT = range(6)
 
 # Helper function to check if user is admin
 def is_admin(user_id):
@@ -78,15 +79,14 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
         text = f"Hello {username}! \nWelcome to Vocab Buddy! You have been registered."
         logger.info(f"✅ New user registered: {username} (ID: {user_id})")
     else:
-        text = f"Hello {username}! \nWelcome back to Vocab Buddy!"
+        text = f"Hello @{username}! \nWelcome back to Vocab Buddy!"
         logger.info(f"🔄 Returning user: {username} (ID: {user_id})")
 
     await update.message.reply_text(text)
 
 async def help_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    """Show comprehensive help information about bot commands and features"""
     user_id = update.effective_user.id
-    username = update.effective_user.username
+    username = update.effective_user.username or "Unknown"
     
     logger.info(f"❓ HELP command from user {username} (ID: {user_id})")
     
@@ -102,6 +102,7 @@ Welcome to Vocab Buddy! Here's everything you need to know to get started with i
    • Only German words/phrases are accepted
    • The bot will automatically provide translations and CEFR levels
    • Confirm if the information is correct to add it to your collection
+   • Option to add multiple words in sequence
 
 📖 <b>/review_words</b> - Practice with your vocabulary (minimum 5 words needed)
    • Reviews 5 words selected based on spaced repetition algorithm
@@ -113,6 +114,12 @@ Welcome to Vocab Buddy! Here's everything you need to know to get started with i
    • Choose the correct English translation from 4 options
    • Get a score and review your performance
    • Track your learning progress with immediate feedback
+
+🔤 <b>/verb_info</b> - Get detailed German verb conjugation information
+   • Enter any German verb to see its complete conjugation
+   • Shows present tense, past tense, and perfect tense forms
+   • Identifies verb type (regular/irregular/modal/separable)
+   • Perfect for mastering German verb patterns
 
 📚 <b>/my_words</b> - View and manage your vocabulary collection
    • See all your words organized by CEFR levels (A1-C2)
@@ -130,8 +137,9 @@ Welcome to Vocab Buddy! Here's everything you need to know to get started with i
 1️⃣ Use <b>/add_word</b> to build your vocabulary (aim for at least 5 words)
 2️⃣ Practice with <b>/review_words</b> to reinforce learning
 3️⃣ Test yourself with <b>/quiz</b> to check your knowledge
-4️⃣ Check your progress with <b>/my_words</b>
-5️⃣ Discover new words with <b>/top_words</b>
+4️⃣ Use <b>/verb_info</b> to learn verb conjugations
+5️⃣ Check your progress with <b>/my_words</b>
+6️⃣ Discover new words with <b>/top_words</b>
 
 📈 <b>LEARNING FEATURES:</b>
 
@@ -139,6 +147,7 @@ Welcome to Vocab Buddy! Here's everything you need to know to get started with i
 🎯 <b>CEFR Levels:</b> Words are categorized from A1 (beginner) to C2 (advanced)
 📝 <b>Contextual Learning:</b> See words in example sentences and paragraphs
 🧠 <b>Interactive Quizzes:</b> Test your knowledge with multiple-choice questions
+🔤 <b>Verb Conjugation:</b> Master German verb forms with detailed analysis
 📊 <b>Progress Tracking:</b> Monitor your review history and quiz scores
 
 💡 <b>TIPS FOR SUCCESS:</b>
@@ -146,6 +155,7 @@ Welcome to Vocab Buddy! Here's everything you need to know to get started with i
 • Add words regularly to build a diverse vocabulary
 • Review consistently to improve retention
 • Take quizzes frequently to test your knowledge
+• Use verb info to understand conjugation patterns
 • Read the example sentences and paragraphs carefully
 • Don't rush - take time to understand each word in context
 • Use quiz results to identify words that need more practice
@@ -173,6 +183,7 @@ You have administrative access! Use these commands:
 • <b>/admin_help</b> - Show admin command help
 • <b>/admin_users</b> - List all users
 • <b>/admin_stats</b> - Show bot statistics
+• <b>/admin_broadcast</b> - Send announcements to all users
 """
     
     await update.message.reply_text(help_text, parse_mode="HTML")
@@ -291,6 +302,34 @@ async def button_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
     
     logger.info(f"🔘 Button callback '{callback_data}' from user {username} (ID: {user_id})")
     
+    # Handle verb analysis callbacks
+    if query.data == "analyze_another_verb":
+        logger.info(f"🔤 User {username} choosing to analyze another verb")
+        await query.edit_message_text(
+            "🔤 <b>German Verb Conjugation</b>\n\n"
+            "Please enter another German verb to see its conjugation information:",
+            reply_markup=None,
+            parse_mode="HTML"
+        )
+        return VERB_INPUT
+    
+    elif query.data == "done_verb_analysis":
+        logger.info(f"✅ User {username} finished verb analysis")
+        await query.edit_message_text(
+            "✅ <b>Great!</b>\n\n"
+            "You've learned about German verb conjugation! 🎉\n\n"
+            "Ready to practice? Try:\n"
+            "• <b>/add_word</b> - Add verbs to your vocabulary\n"
+            "• <b>/review_words</b> - Practice with spaced repetition\n"
+            "• <b>/quiz</b> - Test your knowledge\n\n"
+            "Keep learning! 💪📚",
+            reply_markup=None,
+            parse_mode="HTML"
+        )
+        return ConversationHandler.END
+
+
+
     # Handle add another word callbacks
     if query.data == "add_another_word":
         logger.info(f"➕ User {username} choosing to add another word")
@@ -1238,6 +1277,126 @@ async def complete_quiz(update: Update, context: ContextTypes.DEFAULT_TYPE):
     return ConversationHandler.END
 
 
+
+
+async def verb_info(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """Start the verb information conversation"""
+    user_id = update.effective_user.id
+    username = update.effective_user.username or "Unknown"
+    
+    logger.info(f"🔤 VERB_INFO command from user {username} (ID: {user_id})")
+    
+    await update.message.reply_text(
+        "🔤 <b>German Verb Conjugation</b>\n\n"
+        "Please enter a German verb to see its conjugation information:",
+        parse_mode="HTML"
+    )
+    return VERB_INPUT
+
+async def receive_verb(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """Process the verb entered by user"""
+    user_id = update.effective_user.id
+    username = update.effective_user.username or "Unknown"
+    input_verb = update.message.text.strip()
+    
+    logger.info(f"🔍 User {username} analyzing verb: '{input_verb}'")
+    
+    # Show processing message
+    processing_msg = await update.message.reply_text(
+        "🔍 <b>Analyzing verb...</b>\n\n"
+        "Please wait while I check the conjugation information.",
+        parse_mode="HTML"
+    )
+    
+    try:
+        # Get verb information from AI
+        groq_client = GroqClient()
+        verb_response = groq_client.get_verb_info(input_verb)
+        
+        logger.info(f"🤖 AI response for verb '{input_verb}': {verb_response}")
+        
+        # Check if it's not a verb
+        if verb_response.strip().lower() == "not a verb":
+            await processing_msg.edit_text(
+                f"❌ <b>'{input_verb}' is not a German verb</b>\n\n"
+                "Please try again with a German verb (like 'gehen', 'haben', 'lernen', etc.)",
+                parse_mode="HTML"
+            )
+            return VERB_INPUT  # Keep conversation active for retry
+        
+        # Format the verb information for display
+        formatted_info = format_verb_info(verb_response, input_verb)
+        
+        # Add action buttons
+        reply_keyboard = [
+            [
+                InlineKeyboardButton("🔤 Analyze Another Verb", callback_data="analyze_another_verb"),
+                InlineKeyboardButton("✅ Done", callback_data="done_verb_analysis")
+            ]
+        ]
+        markup = InlineKeyboardMarkup(reply_keyboard)
+        
+        await processing_msg.edit_text(
+            formatted_info,
+            reply_markup=markup,
+            parse_mode="HTML"
+        )
+        
+        logger.info(f"✅ Successfully displayed verb info for '{input_verb}' to user {username}")
+        return ConversationHandler.END
+        
+    except Exception as e:
+        logger.error(f"❌ Error analyzing verb '{input_verb}': {e}")
+        await processing_msg.edit_text(
+            "❌ <b>Sorry, there was an error analyzing the verb.</b>\n\n"
+            "Please try again.",
+            parse_mode="HTML"
+        )
+        return VERB_INPUT  # Keep conversation active for retry
+
+def format_verb_info(verb_response, original_verb):
+    """Format the verb information for better readability"""
+    lines = verb_response.strip().split('\n')
+    formatted = f"🔤 <b>German Verb Analysis: {original_verb}</b>\n\n"
+    
+    current_section = ""
+    for line in lines:
+        line = line.strip()
+        if not line:
+            continue
+            
+        if line.startswith("VERB:"):
+            formatted += f"📝 <b>Infinitive:</b> <code>{line.replace('VERB:', '').strip()}</code>\n"
+        elif line.startswith("MEANING:"):
+            formatted += f"🇬🇧 <b>Meaning:</b> <i>{line.replace('MEANING:', '').strip()}</i>\n"
+        elif line.startswith("TYPE:"):
+            verb_type = line.replace('TYPE:', '').strip()
+            type_emoji = "⚡" if "irregular" in verb_type else "📏" if "regular" in verb_type else "🔧"
+            formatted += f"{type_emoji} <b>Type:</b> {verb_type}\n\n"
+        elif line.startswith("PRESENT TENSE:"):
+            formatted += "🟢 <b>PRESENT TENSE:</b>\n"
+            current_section = "present"
+        elif line.startswith("PAST TENSE"):
+            formatted += "\n🟡 <b>PAST TENSE (Präteritum):</b>\n"
+            current_section = "past"
+        elif line.startswith("PERFECT TENSE:"):
+            formatted += "\n🔵 <b>PERFECT TENSE:</b>\n"
+            current_section = "perfect"
+        elif line.startswith("Past Participle:"):
+            formatted += f"• <b>Past Participle:</b> <code>{line.replace('Past Participle:', '').strip()}</code>\n"
+        elif line.startswith("Auxiliary:"):
+            formatted += f"• <b>Auxiliary:</b> <code>{line.replace('Auxiliary:', '').strip()}</code>\n"
+        elif current_section in ["present", "past"] and line:
+            # Format conjugation lines
+            if any(pronoun in line for pronoun in ["ich", "du", "er/sie/es", "wir", "ihr", "sie/Sie"]):
+                formatted += f"• <code>{line}</code>\n"
+    
+    formatted += "\n💡 <i>Tip: Practice these forms to master German verb conjugation!</i>"
+    return formatted
+
+
+
+
 # ADMIN COMMANDS
 async def admin_users(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """Admin command to list all users"""
@@ -1619,6 +1778,20 @@ def main():
         fallbacks=[CommandHandler("cancel", lambda update, context: ConversationHandler.END)],
     )
 
+    # Verb info conversation handler
+    verb_info_conv = ConversationHandler(
+        entry_points=[
+            CommandHandler("verb_info", verb_info),
+            CallbackQueryHandler(button_callback, pattern="^analyze_another_verb$")
+        ],
+        states={
+            VERB_INPUT: [MessageHandler(filters.TEXT & ~filters.COMMAND, receive_verb)],
+        },
+        fallbacks=[CommandHandler("cancel", lambda update, context: ConversationHandler.END)],
+    )
+    
+
+
     review_conv = ConversationHandler(
         entry_points=[
             CommandHandler("review_words", review_words),
@@ -1656,6 +1829,7 @@ def main():
     app.add_handler(review_conv)
     app.add_handler(vocab_manage_conv)
     app.add_handler(quiz_conv)
+    app.add_handler(verb_info_conv)
     
     # Add general callback handler last (less specific)
     app.add_handler(CallbackQueryHandler(button_callback))
