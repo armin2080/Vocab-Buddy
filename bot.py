@@ -67,16 +67,18 @@ def is_admin(user_id):
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user_id = update.effective_user.id
     username = update.effective_user.username
-    
+    if not username:
+        username = update.effective_user.first_name or "Unknown"  # Use first name if username is missing
+
     logger.info(f"👋 START command from user {username} (ID: {user_id})")
-    
+
     user_exists = db_manager.fetch_all('users', where_clause='telegram_id', where_args=[user_id])
     if not user_exists:
         db_manager.add_instance('users', columns=['telegram_id', 'username'], new_vals=[user_id, username])
-        text = f"Hello @{username}! \nWelcome to Vocab Buddy! You have been registered."
+        text = f"Hello {username}! \nWelcome to Vocab Buddy! You have been registered."
         logger.info(f"✅ New user registered: {username} (ID: {user_id})")
     else:
-        text = f"Hello @{username}! \nWelcome back to Vocab Buddy!"
+        text = f"Hello {username}! \nWelcome back to Vocab Buddy!"
         logger.info(f"🔄 Returning user: {username} (ID: {user_id})")
 
     await update.message.reply_text(text)
