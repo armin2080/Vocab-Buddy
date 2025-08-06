@@ -66,6 +66,7 @@ class DatabaseManager:
             'created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP'
         ])
         
+        
         # Create words table
         self.create_table('words', [
             'word TEXT NOT NULL UNIQUE',
@@ -207,6 +208,15 @@ class DatabaseManager:
                 level_words[cefr_level].append((word, translation, total_reviews))
         
         return level_words
+    
+    def execute_query(self, query, params=None):
+        """
+        Execute a raw SQL query with optional parameters.
+        Returns all fetched results.
+        """
+        with self.conn:
+            cursor = self.conn.execute(query, params or [])
+            return cursor.fetchall()
 
 
 
@@ -219,6 +229,6 @@ class DatabaseManager:
 if __name__ == "__main__":
     db = DatabaseManager()
 
-    print(db.choose_words(157283561,k=2))
-    
+    db.execute_query("ALTER TABLE users ADD COLUMN join_date DATETIME;")    
+    db.execute_query("UPDATE users SET join_date = CURRENT_TIMESTAMP WHERE join_date IS NULL;")
     print("Database operations completed successfully.")
