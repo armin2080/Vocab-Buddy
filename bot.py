@@ -66,23 +66,36 @@ def is_admin(user_id):
 
 
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """Handle the /start command and register a new user."""
     user_id = update.effective_user.id
-    username = update.effective_user.username
-    if not username:
-        username = update.effective_user.first_name or "Unknown"  # Use first name if username is missing
+    username = update.effective_user.username or "Unknown"
+    
+    logger.info(f"👤 New user started: {username} (ID: {user_id})")
 
-    logger.info(f"👋 START command from user {username} (ID: {user_id})")
-
+    # Check if user already exists in the database
     user_exists = db_manager.fetch_all('users', where_clause='telegram_id', where_args=[user_id])
     if not user_exists:
-        db_manager.add_instance('users', columns=['telegram_id', 'username'], new_vals=[user_id, username])
-        text = f"Hello {username}! \nWelcome to Vocab Buddy! You have been registered."
-        logger.info(f"✅ New user registered: {username} (ID: {user_id})")
+    
+        join_date = datetime.now().strftime('%Y-%m-%d %H:%M:%S')  # Current timestamp
+
+        # Add new user to the database with join_date
+        db_manager.add_instance(
+            'users',
+            columns=['telegram_id', 'username', 'join_date'],
+            new_vals=[user_id, username, join_date]
+        )
+
+        text = f"👋 Hello @{username}.\nWelcome to Vocab Buddy!\n\nStart building your vocabulary today! Use /help to see available commands."
+        logger.info(f"✅ User {username} (ID: {user_id}) registered successfully with join date {join_date}.")
     else:
         text = f"Hello @{username}! \nWelcome back to Vocab Buddy!"
         logger.info(f"🔄 Returning user: {username} (ID: {user_id})")
 
-    await update.message.reply_text(text)
+    # Send welcome message
+    await update.message.reply_text(
+        text,
+        parse_mode="HTML"
+    )
 
 async def help_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user_id = update.effective_user.id
