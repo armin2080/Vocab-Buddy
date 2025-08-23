@@ -10,7 +10,31 @@ import logging
 import os
 import random
 import asyncio
+from logging.handlers import RotatingFileHandler
+import atexit
+import sys
 
+
+# Custom log handler that deletes the log file if the first line is older than 3 days
+class CustomRotatingFileHandler(RotatingFileHandler):
+    def emit(self, record):
+        log_path = self.baseFilename
+        try:
+            if os.path.exists(log_path):
+                with open(log_path, 'r', encoding='utf-8', errors='ignore') as f:
+                    first_line = f.readline()
+                # Try to parse the date from the first line
+                try:
+                    # Assumes log format starts with date, e.g. '2025-08-23 12:00:00,000 - ...'
+                    date_str = first_line.split(' - ')[0]
+                    log_date = datetime.strptime(date_str, '%Y-%m-%d %H:%M:%S,%f')
+                    if datetime.now() - log_date > timedelta(days=3):
+                        os.remove(log_path)
+                except Exception:
+                    pass
+        except Exception:
+            pass
+        super().emit(record)
 
 # Load the bot token from the config file
 with open("config.json", "r") as f:
@@ -18,30 +42,42 @@ with open("config.json", "r") as f:
 TOKEN: Final = config["BOT_TOKEN"]
 ADMIN_ID: Final = config.get("ADMIN_ID", None)  # Optional admin ID
 
-# Set up logging
-logging.basicConfig(
-    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
-    level=logging.INFO,
-    handlers=[
-        logging.FileHandler('vocab_buddy.log'),
-        logging.StreamHandler()
-    ]
+# Set up logging with rotation and custom file handler
+log_formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+file_handler = CustomRotatingFileHandler(
+    'vocab_buddy.log',
+    maxBytes=5*1024*1024,  # 5 MB per log file
+    backupCount=3          # Keep up to 3 old log files
 )
+file_handler.setFormatter(log_formatter)
+file_handler.setLevel(logging.INFO)
+
+stream_handler = logging.StreamHandler(sys.stdout)
+stream_handler.setFormatter(log_formatter)
+stream_handler.setLevel(logging.INFO)
+try:
+    stream_handler.stream.reconfigure(encoding='utf-8')
+except AttributeError:
+    pass  # For older Python versions, fallback to default
+
 logger = logging.getLogger(__name__)
+logger.setLevel(logging.INFO)
+logger.addHandler(file_handler)
+logger.addHandler(stream_handler)
 
 # Log startup
-logger.info("🚀 Vocab Buddy Bot Starting Up...")
-logger.info("📊 Loading configuration and initializing components...")
+logger.info("Vocab Buddy Bot Starting Up...")
+logger.info("Loading configuration and initializing components...")
 if ADMIN_ID:
-    logger.info(f"👑 Admin functionality enabled for user ID: {ADMIN_ID}")
+    logger.info(f"Admin functionality enabled for user ID: {ADMIN_ID}")
 else:
-    logger.info("⚠️ No admin ID configured - admin features disabled")
+    logger.info("No admin ID configured - admin features disabled")
 
 # Start database manager and agent client
 groq_client = GroqClient()
 db_manager = DatabaseManager()
 
-logger.info("✅ Database Manager and Groq Client initialized successfully")
+logger.info("Database Manager and Groq Client initialized successfully")
 
 
 # Define conversation states
@@ -70,7 +106,7 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user_id = update.effective_user.id
     username = update.effective_user.username or "Unknown"
     
-    logger.info(f"👤 New user started: {username} (ID: {user_id})")
+    logger.info(f"New user started: {username} (ID: {user_id})")
 
     # Check if user already exists in the database
     user_exists = db_manager.fetch_all('users', where_clause='telegram_id', where_args=[user_id])
@@ -86,10 +122,10 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
         )
 
         text = f"👋 Hello @{username}.\nWelcome to Vocab Buddy!\n\nStart building your vocabulary today! Use /help to see available commands."
-        logger.info(f"✅ User {username} (ID: {user_id}) registered successfully with join date {join_date}.")
+        logger.info(f"User {username} (ID: {user_id}) registered successfully with join date {join_date}.")
     else:
         text = f"Hello @{username}! \nWelcome back to Vocab Buddy!"
-        logger.info(f"🔄 Returning user: {username} (ID: {user_id})")
+        logger.info(f"Returning user: {username} (ID: {user_id})")
 
     # Send welcome message
     await update.message.reply_text(
@@ -101,7 +137,7 @@ async def help_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user_id = update.effective_user.id
     username = update.effective_user.username or "Unknown"
     
-    logger.info(f"❓ HELP command from user {username} (ID: {user_id})")
+    logger.info(f"HELP command from user {username} (ID: {user_id})")
     
     help_text = """
 🤖 <b>Vocab Buddy - Your German Learning Assistant</b>
@@ -208,7 +244,7 @@ async def add_word(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user_id = update.effective_user.id
     username = update.effective_user.username
     
-    logger.info(f"📝 ADD_WORD command from user {username} (ID: {user_id})")
+    logger.info(f"ADD_WORD command from user {username} (ID: {user_id})")
     
     await update.message.reply_text("Please enter the word you want to add:")
     return WORD
@@ -218,15 +254,15 @@ async def receive_word(update: Update, context: ContextTypes.DEFAULT_TYPE):
     username = update.effective_user.username
     input_word = update.message.text
     
-    logger.info(f"🔍 Processing word '{input_word}' for user {username} (ID: {user_id})")
+    logger.info(f"Processing word '{input_word}' for user {username} (ID: {user_id})")
     
     try:
         ai_response = groq_client.get_word_info(input_word)
-        logger.info(f"🤖 AI response: {ai_response}")
+        logger.info(f"AI response: {ai_response}")
         
         # Check if the word is not German
         if ai_response.strip().lower() == "not german":
-            logger.warning(f"⚠️ Non-German word detected: '{input_word}' from user {username}")
+            logger.warning(f"Non-German word detected: '{input_word}' from user {username}")
             await update.message.reply_text(
                 "🇩🇪 <b>Please enter a German word!</b>\n\n"
                 f"The word/phrase <i>'{input_word}'</i> doesn't appear to be German. "
@@ -237,9 +273,9 @@ async def receive_word(update: Update, context: ContextTypes.DEFAULT_TYPE):
             return ConversationHandler.END 
         
         word, translation, cefr_level = ai_response.split(" - ")
-        logger.info(f"✅ Word info received: {word} - {translation} - {cefr_level}")
+        logger.info(f"Word info received: {word} - {translation} - {cefr_level}")
     except ValueError as e:
-        logger.error(f"❌ Error parsing AI response for '{input_word}': {e} | Response: {ai_response}")
+        logger.error(f"Error parsing AI response for '{input_word}': {e} | Response: {ai_response}")
         await update.message.reply_text(
             "❌ <b>Sorry, I couldn't process that word properly.</b>\n\n"
             "Please try again with a different German word.",
@@ -247,7 +283,7 @@ async def receive_word(update: Update, context: ContextTypes.DEFAULT_TYPE):
         )
         return WORD  # Keep the conversation active for retry
     except Exception as e:
-        logger.error(f"❌ Error getting word info for '{input_word}': {e}")
+        logger.error(f"Error getting word info for '{input_word}': {e}")
         await update.message.reply_text(
             "❌ <b>Sorry, there was an error processing your word.</b>\n\n"
             "Please try again.",
@@ -280,7 +316,7 @@ async def receive_word(update: Update, context: ContextTypes.DEFAULT_TYPE):
         context.user_data['word_exists'] = True
         context.user_data['word_id'] = db_word_id
         
-        logger.info(f"🔍 Word '{word}' already exists in database (ID: {db_word_id})")
+        logger.info(f"Word '{word}' already exists in database (ID: {db_word_id})")
 
         await update.message.reply_text(
             f"⚠️ <b>The word</b> <i>'{db_word_text}'</i> <b>already exists in the database.</b>\n"
@@ -292,7 +328,7 @@ async def receive_word(update: Update, context: ContextTypes.DEFAULT_TYPE):
         )
         return ConversationHandler.END
 
-    logger.info(f"🆕 New word '{word}' will be added to database")
+    logger.info(f"New word '{word}' will be added to database")
     
     await update.message.reply_text(
         f"✨ <b>Word:</b> <i>{word}</i>\n"
@@ -313,11 +349,11 @@ async def button_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
     username = update.effective_user.username
     callback_data = query.data
     
-    logger.info(f"🔘 Button callback '{callback_data}' from user {username} (ID: {user_id})")
+    logger.info(f"Button callback '{callback_data}' from user {username} (ID: {user_id})")
     
     # Handle verb analysis callbacks
     if query.data == "analyze_another_verb":
-        logger.info(f"🔤 User {username} choosing to analyze another verb")
+        logger.info(f"User {username} choosing to analyze another verb")
         await query.edit_message_text(
             "🔤 <b>German Verb Conjugation</b>\n\n"
             "Please enter another German verb to see its conjugation information:",
@@ -327,7 +363,7 @@ async def button_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
         return VERB_INPUT
     
     elif query.data == "done_verb_analysis":
-        logger.info(f"✅ User {username} finished verb analysis")
+        logger.info(f"User {username} finished verb analysis")
         await query.edit_message_text(
             "✅ <b>Great!</b>\n\n"
             "You've learned about German verb conjugation! 🎉\n\n"
@@ -345,7 +381,7 @@ async def button_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     # Handle add another word callbacks
     if query.data == "add_another_word":
-        logger.info(f"➕ User {username} choosing to add another word")
+        logger.info(f"User {username} choosing to add another word")
         await query.edit_message_text(
             "📝 <b>Add Another Word</b>\n\n"
             "Please enter the next German word you want to add:",
@@ -357,7 +393,7 @@ async def button_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
         return WORD
     
     elif query.data == "done_adding":
-        logger.info(f"✅ User {username} finished adding words")
+        logger.info(f"User {username} finished adding words")
         await query.edit_message_text(
             "✅ <b>Perfect!</b>\n\n"
             "You've successfully added your words to the vocabulary! 🎉\n\n"
@@ -379,7 +415,7 @@ async def button_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
     # Handle quiz callbacks
     if query.data.startswith("quiz_"):
         if query.data == "quiz_restart":
-            logger.info(f"🔄 User {username} restarting quiz")
+            logger.info(f"User {username} restarting quiz")
             # Clean up any existing quiz data first
             context.user_data.pop('quiz_words', None)
             context.user_data.pop('all_words', None)
@@ -405,13 +441,13 @@ async def button_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
     
     # Handle review conversation callbacks
     if query.data == "continue_examples":
-        logger.info(f"📚 User {username} continuing to examples")
+        logger.info(f"User {username} continuing to examples")
         return await show_examples(update, context)
     elif query.data == "continue_paragraph":
-        logger.info(f"📖 User {username} continuing to paragraph")
+        logger.info(f"User {username} continuing to paragraph")
         return await show_paragraph(update, context)
     elif query.data == "complete_review":
-        logger.info(f"✅ User {username} completing review")
+        logger.info(f"User {username} completing review")
         return await complete_review(update, context)
     
     # Only handle yes/no callbacks for word confirmation
@@ -419,7 +455,7 @@ async def button_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
         return
     
     if query.data == "no":
-        logger.info(f"❌ User {username} declined word addition")
+        logger.info(f"User {username} declined word addition")
         await query.edit_message_text("Please start over by sending /add_word.", reply_markup=None)
         return
     
@@ -428,18 +464,18 @@ async def button_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
     translation = context.user_data['translation']
     cefr_level = context.user_data['cefr_level']
     
-    logger.info(f"✅ User {username} confirmed word addition: '{word}'")
+    logger.info(f"User {username} confirmed word addition: '{word}'")
     
     if context.user_data['word_exists']:
         # Word exists in words table, get its ID
         word_id = context.user_data['word_id']
-        logger.info(f"🔄 Using existing word ID: {word_id}")
+        logger.info(f"Using existing word ID: {word_id}")
     else:
         # Word doesn't exist, add it to words table
         db_manager.add_instance('words', columns=['word', 'translation','cefr_level'], new_vals=[word, translation, cefr_level])
         # Get the newly created word's ID
         word_id = db_manager.fetch_all('words', where_clause='word', where_args=[word])[0][0]
-        logger.info(f"🆕 Created new word in database with ID: {word_id}")
+        logger.info(f"Created new word in database with ID: {word_id}")
     
     # Now check if user already has this word in their collection
     user_word_exists = db_manager.fetch_all('words_users', 
@@ -456,7 +492,7 @@ async def button_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
         
     if user_has_word:
-        logger.warning(f"⚠️ User {username} already has word '{word}' in vocabulary")
+        logger.warning(f"User {username} already has word '{word}' in vocabulary")
         # Add inline buttons for adding another word even when user already has it
         reply_keyboard = [
             [
@@ -476,7 +512,7 @@ async def button_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
     else:
         # Add word to user's collection
         db_manager.add_instance('words_users', columns=['user_id', 'word_id'], new_vals=[user_id, word_id])
-        logger.info(f"🎉 Successfully added word '{word}' to user {username}'s vocabulary")
+        logger.info(f"Successfully added word '{word}' to user {username}'s vocabulary")
         # Add inline buttons for adding another word
         reply_keyboard = [
             [
@@ -499,13 +535,13 @@ async def review_words(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user_id = update.effective_user.id
     username = update.effective_user.username
     
-    logger.info(f"📖 REVIEW_WORDS command from user {username} (ID: {user_id})")
+    logger.info(f"REVIEW_WORDS command from user {username} (ID: {user_id})")
     
     user_words = db_manager.fetch_all('words_users', where_clause='user_id', where_args=[user_id])
-    logger.info(f"📊 User {username} has {len(user_words)} words in vocabulary")
+    logger.info(f"User {username} has {len(user_words)} words in vocabulary")
     
     if len(user_words) < 5:
-        logger.warning(f"⚠️ User {username} has insufficient words for review ({len(user_words)} < 5)")
+        logger.warning(f"User {username} has insufficient words for review ({len(user_words)} < 5)")
         
         error_msg = ("🚦 <b>Not enough words!</b>\n\n"
                     "You need at least <b>5 words</b> in your vocabulary to start a review session. "
@@ -521,7 +557,7 @@ async def review_words(update: Update, context: ContextTypes.DEFAULT_TYPE):
     words_df = db_manager.choose_words(user_id)
     words_df = words_df.sort_values(by='prob', ascending=False).head(5)
     
-    logger.info(f"🎯 Selected 5 words for review for user {username}")
+    logger.info(f"Selected 5 words for review for user {username}")
     
     words_info = []
     for _, row in words_df.iterrows():
@@ -538,7 +574,7 @@ async def review_words(update: Update, context: ContextTypes.DEFAULT_TYPE):
     context.user_data['word_list'] = [word for word, _, _ in words_info]
     
     selected_words = [word for word, _, _ in words_info]
-    logger.info(f"📝 Review words for {username}: {selected_words}")
+    logger.info(f"Review words for {username}: {selected_words}")
 
     reply_text = "📝 <b>Your review words:</b>\n\n"
     for idx, (word, translation, cefr_level) in enumerate(words_info, 1):
@@ -653,12 +689,12 @@ async def top_words(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user_id = update.effective_user.id
     username = update.effective_user.username
     
-    logger.info(f"📊 TOP_WORDS command from user {username} (ID: {user_id})")
+    logger.info(f"TOP_WORDS command from user {username} (ID: {user_id})")
     
     top_words_by_level = db_manager.get_top_words_by_level(limit_per_level=5)
     
     if not top_words_by_level:
-        logger.info("📭 No word statistics available yet")
+        logger.info("No word statistics available yet")
         await update.message.reply_text(
             "📊 <b>No word statistics available yet!</b>\n\n"
             "Start adding and reviewing words to see the most popular vocabulary! 📚",
@@ -666,7 +702,7 @@ async def top_words(update: Update, context: ContextTypes.DEFAULT_TYPE):
         )
         return
     
-    logger.info(f"📈 Displaying top words statistics to user {username}")
+    logger.info(f"Displaying top words statistics to user {username}")
     
     # Define level order and emojis
     level_order = ['A1', 'A2', 'B1', 'B2', 'C1', 'C2']
@@ -702,13 +738,13 @@ async def my_words(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user_id = update.effective_user.id
     username = update.effective_user.username
     
-    logger.info(f"📚 MY_WORDS command from user {username} (ID: {user_id})")
+    logger.info(f"MY_WORDS command from user {username} (ID: {user_id})")
     
     user_words = db_manager.fetch_all('words_users', where_clause='user_id', where_args=[user_id])
-    logger.info(f"📊 User {username} has {len(user_words)} words in vocabulary")
+    logger.info(f"User {username} has {len(user_words)} words in vocabulary")
     
     if not user_words:
-        logger.info(f"📭 User {username} has empty vocabulary")
+        logger.info(f"User {username} has empty vocabulary")
         await update.message.reply_text(
             "📚 <b>Your vocabulary is empty!</b>\n\n"
             "Start adding words using <b>/add_word</b> to build your vocabulary! 💪📖",
@@ -780,7 +816,7 @@ async def my_words_from_callback(update: Update, context: ContextTypes.DEFAULT_T
     user_id = update.effective_user.id
     username = update.effective_user.username
     
-    logger.info(f"📚 MY_WORDS (from callback) command from user {username} (ID: {user_id})")
+    logger.info(f"MY_WORDS (from callback) command from user {username} (ID: {user_id})")
     
     user_words = db_manager.fetch_all('words_users', where_clause='user_id', where_args=[user_id])
     
@@ -905,7 +941,7 @@ async def handle_word_removal(update: Update, context: ContextTypes.DEFAULT_TYPE
     username = update.effective_user.username
     
     if query.data == "back_to_words":
-        logger.info(f"⬅️ User {username} navigating back to word list")
+        logger.info(f"User {username} navigating back to word list")
         # Call my_words function but adapt for callback query instead of message
         user_words = db_manager.fetch_all('words_users', where_clause='user_id', where_args=[user_id])
         
@@ -969,7 +1005,7 @@ async def handle_word_removal(update: Update, context: ContextTypes.DEFAULT_TYPE
     if query.data.startswith("remove_word_"):
         word_id = int(query.data.replace("remove_word_", ""))
         
-        logger.info(f"🗑️ User {username} attempting to remove word ID: {word_id}")
+        logger.info(f"User {username} attempting to remove word ID: {word_id}")
         
         # Get word details before removing
         word_data = db_manager.fetch_all('words', where_clause='id', where_args=[word_id])
@@ -988,7 +1024,7 @@ async def handle_word_removal(update: Update, context: ContextTypes.DEFAULT_TYPE
                 # Delete the record using the delete_instance method
                 db_manager.delete_instance('words_users', where_clause='id = ?', where_args=[record_id])
                 
-                logger.info(f"✅ Successfully removed word '{word_text}' from user {username}'s vocabulary")
+                logger.info(f"Successfully removed word '{word_text}' from user {username}'s vocabulary")
                 
                 await query.edit_message_text(
                     f"✅ <b>Word Removed Successfully!</b>\n\n"
@@ -998,7 +1034,7 @@ async def handle_word_removal(update: Update, context: ContextTypes.DEFAULT_TYPE
                     parse_mode="HTML"
                 )
             else:
-                logger.warning(f"⚠️ Word ID {word_id} not found in user {username}'s vocabulary")
+                logger.warning(f"Word ID {word_id} not found in user {username}'s vocabulary")
                 await query.edit_message_text(
                     f"❌ <b>Error!</b>\n\n"
                     f"Could not find the word in your vocabulary. It may have already been removed.",
@@ -1015,14 +1051,14 @@ async def quiz_vocabulary(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user_id = update.effective_user.id
     username = update.effective_user.username
     
-    logger.info(f"🧠 QUIZ_VOCABULARY command from user {username} (ID: {user_id})")
+    logger.info(f"QUIZ_VOCABULARY command from user {username} (ID: {user_id})")
     
     # Get user's words
     user_words = db_manager.fetch_all('words_users', where_clause='user_id', where_args=[user_id])
-    logger.info(f"📊 User {username} has {len(user_words)} words for quiz")
+    logger.info(f"User {username} has {len(user_words)} words for quiz")
     
     if len(user_words) < 4:
-        logger.warning(f"⚠️ User {username} has insufficient words for quiz ({len(user_words)} < 4)")
+        logger.warning(f"User {username} has insufficient words for quiz ({len(user_words)} < 4)")
         
         error_msg = ("🧠 <b>Not enough words for quiz!</b>\n\n"
                     "You need at least <b>4 words</b> in your vocabulary to start a quiz. "
@@ -1068,7 +1104,7 @@ async def quiz_vocabulary(update: Update, context: ContextTypes.DEFAULT_TYPE):
     context.user_data['quiz_score'] = 0
     context.user_data['quiz_answers'] = []
     
-    logger.info(f"🎯 Starting quiz with {len(quiz_words)} questions for user {username}")
+    logger.info(f"Starting quiz with {len(quiz_words)} questions for user {username}")
     
     start_msg = ("🧠 <b>Vocabulary Quiz Started!</b>\n\n"
                 f"You'll be tested on <b>{len(quiz_words)} German words</b> from your vocabulary.\n\n"
@@ -1170,7 +1206,7 @@ async def handle_quiz_answer(update: Update, context: ContextTypes.DEFAULT_TYPE)
     
     # Make sure we have quiz data
     if 'quiz_correct_answer' not in context.user_data:
-        logger.warning(f"⚠️ Quiz answer received but no quiz data for user {username}")
+        logger.warning(f"Quiz answer received but no quiz data for user {username}")
         return
     
     correct_answer = context.user_data['quiz_correct_answer']
@@ -1187,11 +1223,11 @@ async def handle_quiz_answer(update: Update, context: ContextTypes.DEFAULT_TYPE)
         context.user_data['quiz_score'] += 1
         result_emoji = "✅"
         result_text = "Correct!"
-        logger.info(f"✅ Quiz: User {username} answered correctly - {german_word}")
+        logger.info(f"Quiz: User {username} answered correctly - {german_word}")
     else:
         result_emoji = "❌"
         result_text = "Incorrect!"
-        logger.info(f"❌ Quiz: User {username} answered incorrectly - {german_word}")
+        logger.info(f"Quiz: User {username} answered incorrectly - {german_word}")
     
     # Store answer for final results
     context.user_data['quiz_answers'].append({
@@ -1225,7 +1261,7 @@ async def complete_quiz(update: Update, context: ContextTypes.DEFAULT_TYPE):
     
     percentage = (score / total_questions) * 100
     
-    logger.info(f"🎯 Quiz completed: User {username} scored {score}/{total_questions} ({percentage:.1f}%)")
+    logger.info(f"Quiz completed: User {username} scored {score}/{total_questions} ({percentage:.1f}%)")
     
     # Determine performance emoji and message
     if percentage >= 90:
@@ -1297,7 +1333,7 @@ async def verb_info(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user_id = update.effective_user.id
     username = update.effective_user.username or "Unknown"
     
-    logger.info(f"🔤 VERB_INFO command from user {username} (ID: {user_id})")
+    logger.info(f"VERB_INFO command from user {username} (ID: {user_id})")
     
     await update.message.reply_text(
         "🔤 <b>German Verb Conjugation</b>\n\n"
@@ -1312,7 +1348,7 @@ async def receive_verb(update: Update, context: ContextTypes.DEFAULT_TYPE):
     username = update.effective_user.username or "Unknown"
     input_verb = update.message.text.strip()
     
-    logger.info(f"🔍 User {username} analyzing verb: '{input_verb}'")
+    logger.info(f"User {username} analyzing verb: '{input_verb}'")
     
     # Show processing message
     processing_msg = await update.message.reply_text(
@@ -1326,7 +1362,7 @@ async def receive_verb(update: Update, context: ContextTypes.DEFAULT_TYPE):
         groq_client = GroqClient()
         verb_response = groq_client.get_verb_info(input_verb)
         
-        logger.info(f"🤖 AI response for verb '{input_verb}': {verb_response}")
+        logger.info(f"AI response for verb '{input_verb}': {verb_response}")
         
         # Check if it's not a verb
         if verb_response.strip().lower() == "not a verb":
@@ -1355,11 +1391,11 @@ async def receive_verb(update: Update, context: ContextTypes.DEFAULT_TYPE):
             parse_mode="HTML"
         )
         
-        logger.info(f"✅ Successfully displayed verb info for '{input_verb}' to user {username}")
+        logger.info(f"Successfully displayed verb info for '{input_verb}' to user {username}")
         return ConversationHandler.END
         
     except Exception as e:
-        logger.error(f"❌ Error analyzing verb '{input_verb}': {e}")
+        logger.error(f"Error analyzing verb '{input_verb}': {e}")
         await processing_msg.edit_text(
             "❌ <b>Sorry, there was an error analyzing the verb.</b>\n\n"
             "Please try again.",
@@ -1416,11 +1452,11 @@ async def admin_users(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user_id = update.effective_user.id
     username = update.effective_user.username
     
-    logger.info(f"👑 ADMIN_USERS command from user {username} (ID: {user_id})")
+    logger.info(f"ADMIN_USERS command from user {username} (ID: {user_id})")
     
     # Check if user is admin
     if not is_admin(user_id):
-        logger.warning(f"🚫 Unauthorized admin access attempt from user {username} (ID: {user_id})")
+        logger.warning(f"Unauthorized admin access attempt from user {username} (ID: {user_id})")
         await update.message.reply_text(
             "🚫 <b>Access Denied</b>\n\n"
             "You don't have permission to use admin commands.",
@@ -1439,7 +1475,7 @@ async def admin_users(update: Update, context: ContextTypes.DEFAULT_TYPE):
         )
         return
     
-    logger.info(f"👑 Admin {username} requested user list - {len(all_users)} users found")
+    logger.info(f"Admin {username} requested user list - {len(all_users)} users found")
     
     # Format user list
     reply_text = f"👑 <b>Admin - User List ({len(all_users)} users)</b>\n\n"
@@ -1486,11 +1522,11 @@ async def admin_stats(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user_id = update.effective_user.id
     username = update.effective_user.username
     
-    logger.info(f"👑 ADMIN_STATS command from user {username} (ID: {user_id})")
+    logger.info(f"ADMIN_STATS command from user {username} (ID: {user_id})")
     
     # Check if user is admin
     if not is_admin(user_id):
-        logger.warning(f"🚫 Unauthorized admin access attempt from user {username} (ID: {user_id})")
+        logger.warning(f"Unauthorized admin access attempt from user {username} (ID: {user_id})")
         await update.message.reply_text(
             "🚫 <b>Access Denied</b>\n\n"
             "You don't have permission to use admin commands.",
@@ -1511,7 +1547,7 @@ async def admin_stats(update: Update, context: ContextTypes.DEFAULT_TYPE):
     for user_word in all_user_words:
         active_users.add(user_word[1])  # user_id
     
-    logger.info(f"👑 Admin {username} requested bot statistics")
+    logger.info(f"Admin {username} requested bot statistics")
     
     reply_text = f"👑 <b>Admin - Bot Statistics</b>\n\n"
     reply_text += f"👥 <b>Total Users:</b> {len(all_users)}\n"
@@ -1539,11 +1575,11 @@ async def admin_help(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user_id = update.effective_user.id
     username = update.effective_user.username
     
-    logger.info(f"👑 ADMIN_HELP command from user {username} (ID: {user_id})")
+    logger.info(f"ADMIN_HELP command from user {username} (ID: {user_id})")
     
     # Check if user is admin
     if not is_admin(user_id):
-        logger.warning(f"🚫 Unauthorized admin access attempt from user {username} (ID: {user_id})")
+        logger.warning(f"Unauthorized admin access attempt from user {username} (ID: {user_id})")
         await update.message.reply_text(
             "🚫 <b>Access Denied</b>\n\n"
             "You don't have permission to use admin commands.",
@@ -1591,11 +1627,11 @@ async def admin_broadcast(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user_id = update.effective_user.id
     username = update.effective_user.username
     
-    logger.info(f"👑 ADMIN_BROADCAST command from user {username} (ID: {user_id})")
+    logger.info(f"ADMIN_BROADCAST command from user {username} (ID: {user_id})")
     
     # Check if user is admin
     if not is_admin(user_id):
-        logger.warning(f"🚫 Unauthorized admin access attempt from user {username} (ID: {user_id})")
+        logger.warning(f"Unauthorized admin access attempt from user {username} (ID: {user_id})")
         await update.message.reply_text(
             "🚫 <b>Access Denied</b>\n\n"
             "You don't have permission to use admin commands.",
@@ -1621,7 +1657,7 @@ async def admin_receive_message(update: Update, context: ContextTypes.DEFAULT_TY
     username = update.effective_user.username
     message_text = update.message.text
     
-    logger.info(f"👑 Admin {username} composed broadcast message")
+    logger.info(f"Admin {username} composed broadcast message")
     
     # Store the message in context
     context.user_data['broadcast_message'] = message_text
@@ -1656,7 +1692,7 @@ async def admin_handle_broadcast_callback(update: Update, context: ContextTypes.
     username = update.effective_user.username
     
     if query.data == "cancel_broadcast":
-        logger.info(f"👑 Admin {username} cancelled broadcast")
+        logger.info(f"Admin {username} cancelled broadcast")
         await query.edit_message_text(
             "❌ <b>Broadcast Cancelled</b>\n\n"
             "The message was not sent to users.",
@@ -1676,7 +1712,7 @@ async def admin_handle_broadcast_callback(update: Update, context: ContextTypes.
             )
             return
         
-        logger.info(f"👑 Admin {username} confirmed broadcast - starting delivery")
+        logger.info(f"Admin {username} confirmed broadcast - starting delivery")
         
         # Update the message to show broadcasting status
         await query.edit_message_text(
@@ -1698,6 +1734,8 @@ async def admin_handle_broadcast_callback(update: Update, context: ContextTypes.
             )
             return
         
+
+        
         # Send message to all users
         success_count = 0
         failed_count = 0
@@ -1717,15 +1755,15 @@ async def admin_handle_broadcast_callback(update: Update, context: ContextTypes.
                     parse_mode="HTML"
                 )
                 success_count += 1
-                logger.info(f"📤 Broadcast delivered to user {db_username} (ID: {telegram_id})")
+                logger.info(f"Broadcast delivered to user {db_username} (ID: {telegram_id})")
                 
             except Exception as e:
                 failed_count += 1
-                logger.warning(f"📤 Failed to deliver broadcast to user {db_username} (ID: {telegram_id}): {e}")
+                logger.warning(f"Failed to deliver broadcast to user {db_username} (ID: {telegram_id}): {e}")
         
         # Report results
         total_users = len(all_users)
-        logger.info(f"👑 Broadcast completed: {success_count}/{total_users} delivered, {failed_count} failed")
+        logger.info(f"Broadcast completed: {success_count}/{total_users} delivered, {failed_count} failed")
         
         result_text = f"✅ <b>Broadcast Complete!</b>\n\n"
         result_text += f"📊 <b>Delivery Report:</b>\n"
@@ -1743,15 +1781,17 @@ async def admin_handle_broadcast_callback(update: Update, context: ContextTypes.
             reply_markup=None,
             parse_mode="HTML"
         )
+        return ConversationHandler.END
 
+    return ConversationHandler.END
 
 def main():
-    logger.info("🔧 Initializing Telegram Bot Application...")
+    logger.info("Initializing Telegram Bot Application...")
     
     # Create application
     app = ApplicationBuilder().token(TOKEN).build()
     
-    logger.info("🎯 Setting up command handlers...")
+    logger.info("Setting up command handlers...")
     
     # Add command handlers
     app.add_handler(CommandHandler("start", start))
@@ -1775,9 +1815,9 @@ def main():
         )
         app.add_handler(admin_broadcast_conv)
         
-        logger.info("👑 Admin command handlers registered")
+        logger.info("Admin command handlers registered")
     
-    logger.info("🔄 Setting up conversation handlers...")
+    logger.info("Setting up conversation handlers...")
     
     # Add conversation handlers first (more specific)
     add_word_conv = ConversationHandler(
@@ -1847,8 +1887,8 @@ def main():
     # Add general callback handler last (less specific)
     app.add_handler(CallbackQueryHandler(button_callback))
 
-    logger.info("✅ All handlers registered successfully")
-    logger.info("🚀 Starting bot polling...")
+    logger.info("All handlers registered successfully")
+    logger.info("Starting bot polling...")
     
     try:
         app.run_polling()
@@ -1857,5 +1897,5 @@ def main():
         raise
 
 if __name__ == "__main__":
-    logger.info("🌟 Vocab Buddy Bot Application Starting...")
+    logger.info("Vocab Buddy Bot Application Starting...")
     main()
