@@ -93,21 +93,27 @@ class DatabaseManager:
     def upgrade_schema(self):
         """Add missing columns to existing tables"""
         try:
-            # Check if created_at column exists in users table
+            # Check if created_at and join_date columns exist in users table
             cursor = self.conn.execute("PRAGMA table_info(users)")
             columns = [column[1] for column in cursor.fetchall()]
-            
+
             if 'created_at' not in columns:
-                # Add created_at column to existing users table
                 self.conn.execute("ALTER TABLE users ADD COLUMN created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP")
-                # Update existing records with current timestamp
                 self.conn.execute("UPDATE users SET created_at = CURRENT_TIMESTAMP WHERE created_at IS NULL")
                 self.conn.commit()
                 print("✅ Added created_at column to users table")
-                
+
+            if 'join_date' not in columns:
+                self.conn.execute("ALTER TABLE users ADD COLUMN join_date TEXT")
+                self.conn.commit()
+                print("✅ Added join_date column to users table")
+
         except sqlite3.OperationalError as e:
-            # Table might not exist yet, which is fine
-            pass
+            # Ignore duplicate column errors, only log other errors
+            if "duplicate column name" in str(e):
+                print("Column already exists, skipping ALTER TABLE.")
+            else:
+                print(f"Schema upgrade error: {e}")
 
     def create_table(self,table='users', columns=['telegram_id int NOT NULL', 'username TEXT NOT NULL']):
         prompt = f'CREATE TABLE IF NOT EXISTS {table} ( ID INTEGER PRIMARY KEY AUTOINCREMENT, '
