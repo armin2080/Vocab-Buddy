@@ -132,6 +132,12 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
         text,
         parse_mode="HTML"
     )
+    # Clear terminal output to prevent system overload
+    try:
+        os.system('cls' if os.name == 'nt' else 'clear')
+        logger.info("Terminal output cleared after start command")
+    except Exception as e:
+        logger.warning(f"Failed to clear terminal: {e}")
 
 async def help_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user_id = update.effective_user.id
