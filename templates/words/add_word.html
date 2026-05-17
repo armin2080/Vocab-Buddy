@@ -1,0 +1,40 @@
+{% extends 'base.html' %}
+
+{% block title %}Add Word - Vocab Buddy{% endblock %}
+
+{% block content %}
+    <div class="rounded-lg bg-white shadow-md p-8 max-w-2xl mx-auto">
+        <h2 class="text-3xl font-bold text-gray-900 mb-2">➕ Add a New Word</h2>
+        <p class="text-gray-600 mb-6">Enter a German word to add to your vocabulary. The AI will validate it and provide the translation and CEFR level.</p>
+
+        <form method="post" class="space-y-6">
+            {% csrf_token %}
+            
+            <div>
+                <label for="id_word" class="block text-sm font-medium text-gray-700">German Word</label>
+                <div class="mt-1">
+                    {{ form.word }}
+                    {% if form.word.errors %}
+                        <ul class="mt-2 text-sm text-red-600">
+                            {% for error in form.word.errors %}
+                                <li>❌ {{ error }}</li>
+                            {% endfor %}
+                        </ul>
+                    {% endif %}
+                </div>
+                <p class="mt-2 text-sm text-gray-500">
+                    💡 Examples: "Haus", "laufen", "schön", "schnell"
+                </p>
+            </div>
+
+            <div class="flex space-x-4">
+                <button type="submit" class="rounded-md bg-blue-600 px-6 py-2 text-white font-medium hover:bg-blue-700">
+                    ✨ Add Word
+                </button>
+                <a href="{% url 'words:word_list' %}" class="rounded-md bg-gray-600 px-6 py-2 text-white font-medium hover:bg-gray-700">
+                    ⬅️ Back
+                </a>
+            </div>
+        </form>
+    </div>
+{% endblock %}

@@ -1,0 +1,8 @@
+{% extends 'base.html' %}
+{% block content %}
+<div class="p-4">
+  <h2 class="text-2xl">Verb: {{ verb }}</h2>
+  <pre class="mt-4 bg-gray-100 p-4 whitespace-pre-wrap">{{ info }}</pre>
+  <a href="{% url 'learning:index' %}">Back</a>
+</div>
+{% endblock %}

@@ -1,0 +1,11 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<div class="p-4">
+  <h2 class="text-2xl font-bold">Learning</h2>
+  <ul class="mt-4">
+    <li><a href="{% url 'learning:review_start' %}" class="text-blue-600">Start Review</a></li>
+    <li><a href="{% url 'learning:quiz_start' %}" class="text-blue-600">Start Quiz</a></li>
+  </ul>
+</div>
+{% endblock %}

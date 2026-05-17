@@ -1,0 +1,103 @@
+{% extends 'base.html' %}
+
+{% block title %}Home - Vocab Buddy{% endblock %}
+
+{% block content %}
+    <div class="space-y-8">
+        <div>
+            <h2 class="text-foreground mb-2">Welcome back! 👋</h2>
+            <p class="text-muted-foreground" style="font-size:14px;">You're doing great! Keep up your learning streak.</p>
+        </div>
+
+        {% if user.is_authenticated %}
+            <!-- Stats Grid -->
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+                {% for stat in stats %}
+                    <div class="bg-card rounded-xl p-6 border border-border shadow-sm hover:shadow-md transition-shadow">
+                        <div class="flex items-start justify-between">
+                            <div>
+                                <p class="text-muted-foreground mb-2" style="font-size:14px;">{{ stat.label }}</p>
+                                <p class="text-foreground" style="font-size:28px; font-weight:600;">{{ stat.value }}</p>
+                            </div>
+                            <div class="{{ stat.color }} p-3 rounded-lg">
+                                <!-- icon placeholder -->
+                                <span class="text-white">&nbsp;</span>
+                            </div>
+                        </div>
+                    </div>
+                {% endfor %}
+            </div>
+
+            <!-- Weekly Progress Chart -->
+            <div class="bg-card rounded-xl p-6 border border-border shadow-sm">
+                <div class="flex items-start justify-between gap-4 mb-6">
+                    <div>
+                        <h3 class="text-foreground">This Week's Progress</h3>
+                        <p class="text-muted-foreground" style="font-size:14px;">Words added over the past 7 days</p>
+                    </div>
+                    <div class="rounded-full bg-secondary px-3 py-1 text-sm text-muted-foreground">
+                        {% if weekly_data %}
+                            {{ weekly_data|length }} days
+                        {% else %}
+                            0 days
+                        {% endif %}
+                    </div>
+                </div>
+
+                {% if weekly_data %}
+                    <div class="mb-4 flex items-center justify-between text-sm text-muted-foreground">
+                        <span>{{ weekly_start_label }} → {{ weekly_end_label }}</span>
+                        <span>{{ weekly_total }} words added</span>
+                    </div>
+
+                    <div class="h-72 rounded-xl border border-border bg-background/60 p-4">
+                        <div class="flex h-full items-end gap-3">
+                            {% for point in weekly_data %}
+                                <div class="flex min-w-0 flex-1 flex-col items-center justify-end gap-2">
+                                    <div class="flex h-56 w-full items-end justify-center">
+                                        <div
+                                            class="w-full max-w-[64px] rounded-t-xl bg-primary shadow-sm transition-all hover:bg-primary/90"
+                                            style="height: {{ point.height }}%; background-color: {% if point.is_today %}var(--accent){% else %}var(--chart-1){% endif %};"
+                                            title="{{ point.date }}: {{ point.words }} words"
+                                            aria-label="{{ point.date }}: {{ point.words }} words added"
+                                        >
+                                        </div>
+                                    </div>
+                                    <div class="text-sm font-semibold text-foreground">{{ point.words }}</div>
+                                    <div class="text-xs text-muted-foreground">{{ point.day }}</div>
+                                </div>
+                            {% endfor %}
+                        </div>
+                    </div>
+                {% else %}
+                    <div class="h-72 rounded-xl border border-dashed border-border bg-background/60 flex items-center justify-center text-muted-foreground">
+                        Add a few words to see your weekly activity chart.
+                    </div>
+                {% endif %}
+            </div>
+
+            <!-- Quick Actions -->
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div class="bg-gradient-to-br from-primary to-primary/80 rounded-xl p-6 text-white">
+                    <h3 class="mb-2">Continue Learning</h3>
+                    <p class="mb-4 opacity-90" style="font-size:14px;">Practice your flash cards and reinforce what you've learned.</p>
+                    <a href="{% url 'learning:review_start' %}" class="bg-white text-primary px-4 py-2 rounded-lg hover:bg-white/90 transition-colors" style="font-size:14px;">Start Practice</a>
+                </div>
+
+                <div class="bg-gradient-to-br from-accent to-accent/80 rounded-xl p-6 text-white">
+                    <h3 class="mb-2">Take a Quiz</h3>
+                    <p class="mb-4 opacity-90" style="font-size:14px;">Test your knowledge and track your progress.</p>
+                    <a href="{% url 'learning:quiz_start' %}" class="bg-white text-accent px-4 py-2 rounded-lg hover:bg-white/90 transition-colors" style="font-size:14px;">Start Quiz</a>
+                </div>
+            </div>
+        {% else %}
+            <div class="mt-12 space-y-6">
+                <p class="text-lg text-muted-foreground">Get started by signing in or creating a new account.</p>
+                <div class="flex justify-center space-x-4">
+                    <a href="{% url 'authentication:login' %}" class="rounded-md bg-primary px-6 py-3 text-primary-foreground font-medium hover:opacity-95">Sign In</a>
+                    <a href="{% url 'authentication:register' %}" class="rounded-md border border-border bg-card px-6 py-3 text-foreground font-medium hover:bg-secondary">Create Account</a>
+                </div>
+            </div>
+        {% endif %}
+    </div>
+{% endblock %}

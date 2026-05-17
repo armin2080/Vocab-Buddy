@@ -1,0 +1,166 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<div class="max-w-3xl mx-auto">
+  <h2 class="text-2xl font-bold mb-4">📚 Review Session</h2>
+
+  <!-- Progress -->
+  <div class="mb-6">
+    <div class="flex items-center justify-between mb-2">
+      <span id="card-index" class="text-sm font-semibold">Card 1</span>
+      <span class="text-sm text-muted-foreground" id="card-percent">0% Complete</span>
+    </div>
+    <div class="w-full bg-secondary rounded-full h-2">
+      <div id="progress-bar" class="bg-primary h-2 rounded-full" style="width:0%"></div>
+    </div>
+  </div>
+
+  <!-- Flashcard Display -->
+  <div id="card-container" class="relative w-full h-96 perspective-1000 mb-6">
+    <div id="card-flip-zone" class="absolute inset-0" style="cursor:pointer">
+      <div id="card-level-badge" class="absolute top-4 left-4 bg-secondary text-foreground px-3 py-1 rounded-full text-sm font-medium">{% if cards and cards.0.level %}{{ cards.0.level }}{% else %}LEVEL{% endif %}</div>
+      <div id="card-inner" class="absolute inset-0 rounded-2xl" style="transform-style:preserve-3d;">
+        <div id="card-front" class="absolute inset-0 bg-card rounded-2xl border-2 border-primary shadow-lg flex items-center justify-center p-8 backface-hidden" style="transform:rotateY(0deg); -webkit-backface-visibility:hidden; backface-visibility:hidden; font-size:48px; font-weight:600;">{% if cards and cards.0.front %}{{ cards.0.front }}{% endif %}</div>
+        <div id="card-back" class="absolute inset-0 rounded-2xl border-2 border-primary shadow-lg flex items-center justify-center p-8 backface-hidden" style="transform:rotateY(180deg); -webkit-backface-visibility:hidden; backface-visibility:hidden; color:white; font-size:48px; font-weight:600; background: linear-gradient(135deg, var(--primary, #3b82f6), rgba(59, 130, 246, 0.5));">{% if cards and cards.0.back %}{{ cards.0.back }}{% endif %}</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Controls -->
+  <div class="flex items-center justify-center gap-4 mb-6">
+    <button id="card-prev" class="flex items-center gap-2 px-6 py-3 bg-secondary text-foreground rounded-lg hover:bg-secondary/80">Previous</button>
+    <button id="card-next" class="flex items-center gap-2 px-6 py-3 bg-primary text-white rounded-lg hover:bg-primary/90">Next</button>
+  </div>
+
+  <!-- Examples & Paragraph -->
+  <div class="space-y-4">
+    <div class="bg-green-50 border border-green-200 rounded-lg p-4">
+      <h3 class="font-semibold text-green-900 mb-3">💡 Example Sentences</h3>
+      <ul id="card-examples" class="space-y-2 text-sm text-foreground">
+        {% if cards and cards.0.examples %}
+          {% for example in cards.0.examples %}
+            <li class="rounded-md bg-white/70 px-3 py-2 border border-green-100">{{ example }}</li>
+          {% endfor %}
+        {% endif %}
+      </ul>
+    </div>
+
+    <div id="verb-section" class="bg-purple-50 border border-purple-200 rounded-lg p-4" style="{% if not cards or not cards.0.is_verb %}display:none;{% endif %}">
+      <h3 class="font-semibold text-purple-900 mb-3">🧩 Verb Forms</h3>
+      <div class="overflow-x-auto space-y-4">
+        <table class="w-full text-sm border border-purple-200 rounded-lg overflow-hidden">
+          <tbody id="verb-summary-body"></tbody>
+        </table>
+
+        <div>
+          <div class="font-semibold text-purple-900 mb-2">Present Tense</div>
+          <table class="w-full text-sm border border-purple-200 rounded-lg overflow-hidden">
+            <thead class="bg-purple-100 text-purple-900">
+              <tr><th class="text-left px-3 py-2">Pronoun</th><th class="text-left px-3 py-2">Form</th></tr>
+            </thead>
+            <tbody id="verb-present-body" class="bg-white"></tbody>
+          </table>
+        </div>
+
+        <div>
+          <div class="font-semibold text-purple-900 mb-2">Perfect Tense</div>
+          <table class="w-full text-sm border border-purple-200 rounded-lg overflow-hidden">
+            <thead class="bg-purple-100 text-purple-900">
+              <tr><th class="text-left px-3 py-2">Participle</th><th class="text-left px-3 py-2">Auxiliary</th></tr>
+            </thead>
+            <tbody id="verb-perfect-body" class="bg-white"></tbody>
+          </table>
+        </div>
+
+        <div>
+          <div class="font-semibold text-purple-900 mb-2">Past Tense</div>
+          <table class="w-full text-sm border border-purple-200 rounded-lg overflow-hidden">
+            <thead class="bg-purple-100 text-purple-900">
+              <tr><th class="text-left px-3 py-2">Pronoun</th><th class="text-left px-3 py-2">Form</th></tr>
+            </thead>
+            <tbody id="verb-past-body" class="bg-white"></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Complete Button -->
+  <form method="post" action="{% url 'learning:review_next' %}" class="mt-6" id="review-complete-form">
+    {% csrf_token %}
+    <input type="hidden" name="reviewed_pks" id="reviewed-pks-input" value="" />
+    <button type="submit" class="w-full bg-green-600 hover:bg-green-700 text-white font-bold py-3 px-4 rounded">✅ Complete Review</button>
+  </form>
+
+  <a href="{% url 'learning:index' %}" class="block text-center text-muted-foreground hover:text-foreground mt-4">Back</a>
+
+  <script>
+    window.reviewCards = {{ cards_json_str|safe }};
+
+    (function () {
+      const escapeHtml = (value) => String(value)
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#39;');
+
+      const renderVerbPanel = () => {
+        const front = document.getElementById('card-front');
+        const verbSection = document.getElementById('verb-section');
+        const summaryBody = document.getElementById('verb-summary-body');
+        const presentBody = document.getElementById('verb-present-body');
+        const perfectBody = document.getElementById('verb-perfect-body');
+        const pastBody = document.getElementById('verb-past-body');
+        if (!front || !verbSection || !summaryBody || !presentBody || !perfectBody || !pastBody) return;
+
+        const currentFront = front.textContent.trim();
+        const card = (window.reviewCards || []).find((entry) => entry.front === currentFront);
+
+        if (!card || !card.is_verb || !card.verb_forms_data || !card.verb_forms_data.meta) {
+          verbSection.style.display = 'none';
+          verbSection.classList.add('hidden');
+          summaryBody.innerHTML = '';
+          presentBody.innerHTML = '';
+          perfectBody.innerHTML = '';
+          pastBody.innerHTML = '';
+          return;
+        }
+
+        const data = card.verb_forms_data;
+        const meta = data.meta || {};
+        const renderRows = (rows) => (rows || []).map((row) => `<tr class="border-b border-purple-100 last:border-b-0"><td class="px-3 py-2 font-medium">${escapeHtml(row.pronoun || '')}</td><td class="px-3 py-2">${escapeHtml(row.form || '')}</td></tr>`).join('');
+
+        verbSection.style.display = '';
+        verbSection.classList.remove('hidden');
+        summaryBody.innerHTML = `
+          <tr class="border-b border-purple-100"><th class="px-3 py-2 text-left bg-white/70">Verb</th><td class="px-3 py-2 bg-white">${escapeHtml(meta.verb || '')}</td></tr>
+          <tr class="border-b border-purple-100"><th class="px-3 py-2 text-left bg-white/70">Meaning</th><td class="px-3 py-2 bg-white">${escapeHtml(meta.meaning || '')}</td></tr>
+          <tr><th class="px-3 py-2 text-left bg-white/70">Type</th><td class="px-3 py-2 bg-white">${escapeHtml(meta.type || '')}</td></tr>
+        `;
+        presentBody.innerHTML = renderRows(data.present_rows);
+        perfectBody.innerHTML = `
+          <tr class="border-b border-purple-100"><td class="px-3 py-2 font-medium">Participle</td><td class="px-3 py-2">${escapeHtml(meta.participle || '')}</td></tr>
+          <tr><td class="px-3 py-2 font-medium">Auxiliary</td><td class="px-3 py-2">${escapeHtml(meta.auxiliary || '')}</td></tr>
+        `;
+        pastBody.innerHTML = renderRows(data.past_rows);
+      };
+
+      const startObserver = () => {
+        renderVerbPanel();
+        const front = document.getElementById('card-front');
+        if (!front) return;
+        const observer = new MutationObserver(renderVerbPanel);
+        observer.observe(front, { childList: true, characterData: true, subtree: true });
+        setInterval(renderVerbPanel, 250);
+      };
+
+      if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', startObserver, { once: true });
+      } else {
+        startObserver();
+      }
+    })();
+  </script>
+</div>
+{% endblock %}

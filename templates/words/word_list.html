@@ -1,0 +1,78 @@
+{% extends 'base.html' %}
+
+{% block title %}My Vocabulary - Vocab Buddy{% endblock %}
+
+{% block content %}
+    <div>
+        <div class="mb-8">
+            <h2 class="text-foreground mb-2">Vocabulary</h2>
+            <p class="text-muted-foreground" style="font-size:14px;">Browse and review all your saved words and phrases</p>
+        </div>
+
+        <!-- Search Bar -->
+        <div class="mb-6">
+            <form method="get">
+              <div class="relative">
+                  <input type="text" name="search" placeholder="Search vocabulary..." value="{{ search_query }}" class="w-full pl-10 pr-4 py-3 bg-card border border-input rounded-lg focus:outline-none focus:ring-2 focus:ring-primary text-foreground" style="font-size:14px;" />
+              </div>
+            </form>
+        </div>
+
+        <!-- Filter Tabs (CEFR levels) -->
+        <div class="mb-6">
+            <div class="flex gap-2 overflow-x-auto pb-2">
+                <a href="?" class="px-4 py-2 rounded-lg transition-colors bg-primary text-primary-foreground" style="font-size:14px; white-space:nowrap;">All ({{ total_words }})</a>
+                {% for level, label, count in cefr_with_counts %}
+                    <a href="?level={{ level }}" class="px-4 py-2 rounded-lg transition-colors hover:bg-secondary text-foreground" style="font-size:14px; white-space:nowrap;">{{ level }} ({{ count }})</a>
+                {% endfor %}
+            </div>
+        </div>
+
+        <!-- Vocabulary Grid -->
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            {% for user_word in user_words %}
+                <div class="bg-card rounded-xl p-5 border border-border hover:shadow-md transition-shadow">
+                    <div class="flex items-start justify-between mb-3">
+                        <div class="flex items-center gap-2">
+                            <span class="text-primary capitalize" style="font-size:12px; font-weight:500;">{{ user_word.word.cefr_level }}</span>
+                        </div>
+                        {% if user_word.get_accuracy and user_word.get_accuracy > 80 %}
+                            <div class="bg-success/10 text-success px-2 py-1 rounded flex items-center gap-1">
+                                <span style="font-size:11px">Mastered</span>
+                            </div>
+                        {% endif %}
+                    </div>
+                    <div class="mb-2">
+                        <div class="text-foreground mb-1" style="font-size:18px; font-weight:600;">{{ user_word.word.word }}</div>
+                        <div class="text-muted-foreground" style="font-size:16px;">{{ user_word.word.translation }}</div>
+                    </div>
+                </div>
+            {% empty %}
+                <div class="text-center py-12">
+                    <div class="text-muted-foreground mb-2" style="font-size:48px;">📚</div>
+                    <p class="text-muted-foreground">No words found matching your search</p>
+                </div>
+            {% endfor %}
+        </div>
+
+        <!-- Summary Stats -->
+        <div class="mt-8 grid grid-cols-2 md:grid-cols-4 gap-4">
+            <div class="bg-card rounded-xl p-4 border border-border">
+                <div class="text-foreground mb-1" style="font-size:24px; font-weight:600;">{{ total_words }}</div>
+                <div class="text-muted-foreground" style="font-size:12px;">Total Words</div>
+            </div>
+            <div class="bg-card rounded-xl p-4 border border-border">
+                <div class="text-success mb-1" style="font-size:24px; font-weight:600;">{{ mastered_count }}</div>
+                <div class="text-muted-foreground" style="font-size:12px;">Mastered</div>
+            </div>
+            <div class="bg-card rounded-xl p-4 border border-border">
+                <div class="text-accent mb-1" style="font-size:24px; font-weight:600;">0</div>
+                <div class="text-muted-foreground" style="font-size:12px;">Learning</div>
+            </div>
+            <div class="bg-card rounded-xl p-4 border border-border">
+                <div class="text-primary mb-1" style="font-size:24px; font-weight:600;">0%</div>
+                <div class="text-muted-foreground" style="font-size:12px;">Mastery Rate</div>
+            </div>
+        </div>
+    </div>
+{% endblock %}

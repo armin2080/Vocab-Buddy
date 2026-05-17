@@ -1,0 +1,168 @@
+<!DOCTYPE html>
+<html lang="en">
+{% load static %}
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}Vocab Buddy{% endblock %}</title>
+    <meta name="theme-color" content="#5B7FFF">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="default">
+    <link rel="manifest" href="{% url 'manifest' %}">
+    <link rel="apple-touch-icon" href="{% static 'icons/apple-touch-icon.png' %}">
+    <link rel="icon" type="image/png" sizes="32x32" href="{% static 'icons/favicon-32.png' %}">
+    <link rel="icon" type="image/png" sizes="16x16" href="{% static 'icons/favicon-16.png' %}">
+    <link rel="icon" href="{% static 'icons/favicon.ico' %}">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        /* Core theme variables (adapted from frontend theme.css) */
+        :root {
+          --font-size: 16px;
+          --background: #FAFAF9;
+          --foreground: #1F2937;
+          --card: #ffffff;
+          --card-foreground: #1F2937;
+          --popover: #ffffff;
+          --popover-foreground: #1F2937;
+          --primary: #5B7FFF;
+          --primary-foreground: #ffffff;
+          --secondary: #F3F4F6;
+          --secondary-foreground: #1F2937;
+          --muted: #F3F4F6;
+          --muted-foreground: #6B7280;
+          --accent: #FF7B54;
+          --accent-foreground: #ffffff;
+          --destructive: #EF4444;
+          --destructive-foreground: #ffffff;
+          --success: #10B981;
+          --success-foreground: #ffffff;
+          --border: #E5E7EB;
+          --input: #E5E7EB;
+          --input-background: #ffffff;
+          --chart-1: #5B7FFF;
+          --chart-2: #FF7B54;
+          --chart-3: #10B981;
+          --chart-4: #F59E0B;
+          --radius: 0.75rem;
+        }
+
+        /* Small helper classes used by the React frontend design */
+        .bg-card { background-color: var(--card); }
+        .text-foreground { color: var(--foreground); }
+        .text-muted-foreground { color: var(--muted-foreground); }
+        .border-border { border-color: var(--border); }
+        .bg-primary { background-color: var(--primary); }
+        .text-primary { color: var(--primary); }
+        .bg-accent { background-color: var(--accent); }
+        .text-accent { color: var(--accent); }
+        .bg-success { background-color: var(--success); }
+        .text-success { color: var(--success); }
+        .bg-destructive { background-color: var(--destructive); }
+        .text-destructive { color: var(--destructive); }
+        .border-input { border-color: var(--input); }
+        .bg-input { background-color: var(--input); }
+        .bg-input-background { background-color: var(--input-background); }
+        .ring-ring { box-shadow: 0 0 0 3px rgba(91,123,255,0.15); }
+
+        body { background-color: var(--background); color: var(--foreground); }
+    </style>
+    <link rel="stylesheet" href="{% static 'css/fonts.css' %}">
+    <link rel="stylesheet" href="{% static 'css/theme.css' %}">
+    {% block extra_css %}{% endblock %}
+</head>
+<body class="bg-background">
+        <!-- App Header (matches frontend layout) -->
+        <header class="bg-card border-b border-border sticky top-0 z-50">
+            <div class="max-w-7xl mx-auto px-4 sm:px-6 py-3 sm:py-4">
+                <div class="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between mb-4">
+                    <div class="flex items-start justify-between gap-3 lg:block">
+                        <div>
+                            <a href="{% url 'home' %}" class="text-foreground text-xl sm:text-2xl font-semibold leading-tight">Vocab Buddy</a>
+                            <p class="hidden sm:block text-muted-foreground mt-1" style="font-size:14px;">Master languages one word at a time</p>
+                        </div>
+                    </div>
+
+                    <div class="flex flex-wrap items-center gap-2 sm:gap-3 justify-start lg:justify-end">
+                        {% if user.is_authenticated %}
+                            <div class="bg-accent/10 text-accent px-3 sm:px-4 py-2 rounded-lg whitespace-nowrap">
+                                <span style="font-size:14px;">{{ study_streak_label }}</span>
+                            </div>
+                            <div class="text-sm text-foreground whitespace-nowrap">{{ user.username }}</div>
+                            <a href="{% url 'authentication:logout' %}" class="rounded-md bg-destructive px-3 py-2 text-white text-sm whitespace-nowrap">Logout</a>
+                        {% else %}
+                            <a href="{% url 'authentication:login' %}" class="text-sm text-foreground whitespace-nowrap">Sign In</a>
+                            <a href="{% url 'authentication:register' %}" class="rounded-md bg-primary px-3 py-2 text-white text-sm">Sign Up</a>
+                        {% endif %}
+                    </div>
+                </div>
+
+                <!-- Tabs -->
+                <nav class="flex flex-wrap gap-2 overflow-x-auto">
+                    <a href="{% url 'home' %}" class="flex items-center gap-2 px-3 sm:px-4 py-2.5 rounded-lg transition-all {% if request.resolver_match.url_name == 'home' %}bg-primary text-primary-foreground{% else %}text-foreground hover:bg-secondary{% endif %}" style="font-size:14px; white-space:nowrap;">Home</a>
+                    <a href="{% url 'learning:review_start' %}" class="flex items-center gap-2 px-3 sm:px-4 py-2.5 rounded-lg transition-all {% if request.resolver_match.url_name == 'review_start' or request.resolver_match.url_name == 'review_next' %}bg-primary text-primary-foreground{% else %}text-foreground hover:bg-secondary{% endif %}" style="font-size:14px; white-space:nowrap;">Flash Cards</a>
+                    <a href="{% url 'words:word_list' %}" class="flex items-center gap-2 px-3 sm:px-4 py-2.5 rounded-lg transition-all {% if request.resolver_match.namespace == 'words' %}bg-primary text-primary-foreground{% else %}text-foreground hover:bg-secondary{% endif %}" style="font-size:14px; white-space:nowrap;">Vocabulary</a>
+                    <a href="{% url 'words:add_word' %}" class="flex items-center gap-2 px-3 sm:px-4 py-2.5 rounded-lg transition-all {% if request.resolver_match.url_name == 'add_word' %}bg-primary text-primary-foreground{% else %}text-foreground hover:bg-secondary{% endif %}" style="font-size:14px; white-space:nowrap;">Add Word</a>
+                    <a href="{% url 'learning:quiz_start' %}" class="flex items-center gap-2 px-3 sm:px-4 py-2.5 rounded-lg transition-all {% if request.resolver_match.url_name == 'quiz_start' or request.resolver_match.url_name == 'quiz_question' %}bg-primary text-primary-foreground{% else %}text-foreground hover:bg-secondary{% endif %}" style="font-size:14px; white-space:nowrap;">Quiz</a>
+                </nav>
+            </div>
+        </header>
+
+    <!-- Flash Messages -->
+    {% if messages %}
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
+            <div class="space-y-2">
+                {% for message in messages %}
+                    <div class="rounded-md bg-{{ message.tags|default:'blue' }}-50 p-4 border border-{{ message.tags|default:'blue' }}-200">
+                        <div class="text-sm text-{{ message.tags|default:'blue' }}-800">
+                            {{ message }}
+                        </div>
+                    </div>
+                {% endfor %}
+            </div>
+        </div>
+    {% endif %}
+
+    <!-- Main Content -->
+    <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        {% block content %}{% endblock %}
+    </main>
+
+    <!-- Footer -->
+    <footer class="bg-white border-t border-gray-200 mt-12">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-8">
+                <div>
+                    <h3 class="text-lg font-semibold text-gray-900">Vocab Buddy</h3>
+                    <p class="mt-2 text-sm text-gray-600">Master German vocabulary through spaced repetition and interactive quizzes.</p>
+                </div>
+                <div>
+                    <h4 class="text-sm font-semibold text-gray-900 uppercase">Features</h4>
+                    <ul class="mt-2 space-y-2 text-sm text-gray-600">
+                        <li><a href="{% url 'words:add_word' %}" class="hover:text-blue-600">Add Words</a></li>
+                        <li><a href="{% url 'learning:review_start' %}" class="hover:text-blue-600">Review</a></li>
+                        <li><a href="{% url 'learning:quiz_start' %}" class="hover:text-blue-600">Quiz</a></li>
+                    </ul>
+                </div>
+                <div>
+                    <h4 class="text-sm font-semibold text-gray-900 uppercase">About</h4>
+                    <p class="mt-2 text-sm text-gray-600">Built with Django and Tailwind CSS</p>
+                </div>
+            </div>
+            <div class="border-t border-gray-200 mt-8 pt-8">
+                <p class="text-center text-sm text-gray-600">&copy; 2026 Vocab Buddy. All rights reserved.</p>
+            </div>
+        </div>
+    </footer>
+
+    {% block extra_js %}{% endblock %}
+    <script src="{% static 'js/ui.js' %}?v=3"></script>
+    <script src="{% static 'js/verb-panel.js' %}?v=1"></script>
+        <script>
+            if ('serviceWorker' in navigator) {
+                window.addEventListener('load', () => {
+                    navigator.serviceWorker.register('{% url "service_worker" %}');
+                });
+            }
+        </script>
+</body>
+</html>

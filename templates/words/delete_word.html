@@ -1,0 +1,52 @@
+{% extends 'base.html' %}
+
+{% block title %}Delete Word - Vocab Buddy{% endblock %}
+
+{% block content %}
+    <div class="rounded-lg bg-white shadow-md p-8 max-w-2xl mx-auto">
+        <h2 class="text-3xl font-bold text-gray-900 mb-6">⚠️ Remove Word?</h2>
+        
+        <div class="rounded-lg border-l-4 border-red-500 bg-red-50 p-6 mb-8">
+            <p class="text-red-800">
+                Are you sure you want to remove <strong>"{{ user_word.word.word }}"</strong> from your vocabulary?
+            </p>
+            <p class="text-red-700 text-sm mt-2">
+                This action cannot be undone, but you can add it back later.
+            </p>
+        </div>
+
+        <div class="rounded-lg border border-gray-200 p-6 mb-8 bg-gray-50">
+            <h3 class="font-medium text-gray-900 mb-4">Word Information</h3>
+            <div class="grid grid-cols-2 gap-4">
+                <div>
+                    <p class="text-sm text-gray-500">Word</p>
+                    <p class="font-bold text-lg">{{ user_word.word.word }}</p>
+                </div>
+                <div>
+                    <p class="text-sm text-gray-500">Translation</p>
+                    <p class="text-lg">{{ user_word.word.translation }}</p>
+                </div>
+                <div>
+                    <p class="text-sm text-gray-500">Level</p>
+                    <p class="text-lg font-medium">{{ user_word.word.cefr_level }}</p>
+                </div>
+                <div>
+                    <p class="text-sm text-gray-500">Reviews</p>
+                    <p class="text-lg">{{ user_word.review_count }}</p>
+                </div>
+            </div>
+        </div>
+
+        <form method="post" class="space-y-4">
+            {% csrf_token %}
+            <div class="flex space-x-4">
+                <button type="submit" class="rounded-md bg-red-600 px-6 py-2 text-white font-medium hover:bg-red-700">
+                    🗑️ Yes, Remove Word
+                </button>
+                <a href="{% url 'words:word_detail' user_word.pk %}" class="rounded-md bg-gray-600 px-6 py-2 text-white font-medium hover:bg-gray-700">
+                    ❌ Cancel
+                </a>
+            </div>
+        </form>
+    </div>
+{% endblock %}

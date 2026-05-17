@@ -1,0 +1,49 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<div class="max-w-2xl mx-auto">
+  <!-- Progress -->
+  <div class="mb-6">
+    <div class="flex justify-between items-center mb-2">
+      <span class="text-sm font-semibold">Question {{ question_num }} of {{ total_questions }}</span>
+      <span class="text-sm text-gray-600">{{ progress_percent }}%</span>
+    </div>
+    <div class="w-full bg-gray-200 rounded-full h-2">
+      <div class="bg-blue-600 h-2 rounded-full" style="width: {{ progress_percent }}%"></div>
+    </div>
+  </div>
+  
+  <!-- Question -->
+  <div class="bg-blue-50 border-l-4 border-blue-500 p-6 mb-6">
+    <p class="text-sm text-gray-600 mb-2">🇩🇪 German Word:</p>
+    <h2 class="text-3xl font-bold text-blue-900">{{ word }}</h2>
+  </div>
+  
+  <!-- Multiple Choice Options -->
+  <form method="post" id="quiz-form" class="space-y-3">
+    {% csrf_token %}
+
+    {% for letter, option in options_with_labels %}
+      <div class="">
+        <label class="block w-full">
+          <input type="radio" name="answer" value="{{ forloop.counter0 }}" class="hidden option-radio" />
+          <div class="w-full p-4 rounded-xl border-2 bg-card text-foreground hover:scale-[1.02] transition-all option-label">
+            <div class="flex items-center justify-between">
+              <div class="flex items-center gap-3">
+                <span class="inline-block w-8 h-8 bg-secondary rounded-full flex items-center justify-center text-sm font-medium">{{ letter }}</span>
+                <span class="text-lg">{{ option }}</span>
+              </div>
+            </div>
+          </div>
+        </label>
+      </div>
+    {% endfor %}
+
+    <div class="pt-4">
+      <button type="submit" id="quiz-submit" class="w-full bg-primary text-primary-foreground py-3 px-4 rounded disabled:opacity-50 disabled:cursor-not-allowed" disabled>
+        → Next Question
+      </button>
+    </div>
+  </form>
+</div>
+{% endblock %}

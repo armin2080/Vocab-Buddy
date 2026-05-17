@@ -1,0 +1,11 @@
+{% extends 'base.html' %}
+{% block content %}
+<div class="p-4">
+  <h3 class="text-xl">Review: {{ uword.word.word }}</h3>
+  <p>Translation: {{ uword.word.translation }}</p>
+  <form method="post">{% csrf_token %}
+    {{ form.correct }} <label>Correct</label>
+    <button type="submit" class="ml-2 px-2 py-1 bg-blue-500 text-white">Submit</button>
+  </form>
+</div>
+{% endblock %}

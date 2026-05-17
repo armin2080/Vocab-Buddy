@@ -1,0 +1,53 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<div class="max-w-2xl mx-auto">
+  <!-- Score Summary -->
+  <div class="bg-gradient-to-r from-blue-500 to-blue-600 rounded-lg p-6 mb-6 text-white">
+    <h2 class="text-2xl font-bold mb-2">🎉 Quiz Complete!</h2>
+    <div class="grid grid-cols-3 gap-4 mt-4">
+      <div class="bg-white bg-opacity-20 rounded p-4 text-center">
+        <div class="text-3xl font-bold">{{ correct }}/{{ total }}</div>
+        <div class="text-sm">Correct Answers</div>
+      </div>
+      <div class="bg-white bg-opacity-20 rounded p-4 text-center">
+        <div class="text-3xl font-bold">{% widthratio correct total 100 %}%</div>
+        <div class="text-sm">Accuracy</div>
+      </div>
+      <div class="bg-white bg-opacity-20 rounded p-4 text-center">
+        <div class="text-3xl font-bold">{{ total }}</div>
+        <div class="text-sm">Total Questions</div>
+      </div>
+    </div>
+  </div>
+  
+  <!-- Answer Review -->
+  <div class="space-y-4">
+    <h3 class="text-xl font-bold">📋 Your Answers</h3>
+    {% for answer in answers %}
+      <div class="border rounded-lg p-4 {% if answer.is_correct %}border-green-200 bg-green-50{% else %}border-red-200 bg-red-50{% endif %}">
+        <div class="flex items-start justify-between">
+          <div>
+            <p class="font-semibold text-lg">{{ answer.question }}</p>
+            <p class="text-sm text-gray-600">Correct: <span class="font-mono">{{ answer.correct_answer }}</span></p>
+            <p class="text-sm text-gray-600">Your answer: <span class="font-mono">{{ answer.user_answer }}</span></p>
+          </div>
+          <div class="text-2xl">
+            {% if answer.is_correct %}✅{% else %}❌{% endif %}
+          </div>
+        </div>
+      </div>
+    {% endfor %}
+  </div>
+  
+  <!-- Actions -->
+  <div class="mt-8 space-x-4 flex">
+    <a href="{% url 'learning:quiz_start' %}" class="flex-1 text-center bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-4 rounded">
+      🔄 Try Another Quiz
+    </a>
+    <a href="{% url 'learning:index' %}" class="flex-1 text-center bg-gray-300 hover:bg-gray-400 text-gray-900 font-bold py-3 px-4 rounded">
+      ← Back to Learning
+    </a>
+  </div>
+</div>
+{% endblock %}
