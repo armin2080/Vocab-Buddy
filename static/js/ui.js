@@ -64,6 +64,25 @@ document.addEventListener('DOMContentLoaded', function () {
     list.innerHTML = items.map((line) => `<li class="rounded-md bg-white/70 px-3 py-2 border border-green-100">${escapeHtml(line)}</li>`).join('');
   }
 
+  function fitFlashcardText(el) {
+    if (!el) return;
+    const baseSize = 48;
+    const minSize = 24;
+    el.style.fontSize = `${baseSize}px`;
+
+    while (
+      parseFloat(el.style.fontSize) > minSize &&
+      (el.scrollWidth > el.clientWidth || el.scrollHeight > el.clientHeight)
+    ) {
+      el.style.fontSize = `${parseFloat(el.style.fontSize) - 2}px`;
+    }
+  }
+
+  function fitCurrentFlashcardText() {
+    fitFlashcardText(document.getElementById('card-front'));
+    fitFlashcardText(document.getElementById('card-back'));
+  }
+
   function renderVerbForms(data) {
     const verbSection = document.getElementById('verb-section');
     const summaryBody = document.getElementById('verb-summary-body');
@@ -124,6 +143,7 @@ document.addEventListener('DOMContentLoaded', function () {
     const pastBody = document.getElementById('verb-past-body');
     frontEl.textContent = currentCard.front;
     backEl.textContent = currentCard.back;
+    fitCurrentFlashcardText();
     if (verbSection) {
       verbSection.style.display = currentCard.is_verb ? '' : 'none';
       verbSection.classList.toggle('hidden', !currentCard.is_verb);
@@ -207,6 +227,7 @@ document.addEventListener('DOMContentLoaded', function () {
   document.getElementById('card-next')?.addEventListener('click', function () { flipCardIfNeeded(false); pickAndShow(); });
   document.getElementById('card-prev')?.addEventListener('click', function () { flipCardIfNeeded(false); showPreviousCard(); });
   document.getElementById('card-flip-zone')?.addEventListener('click', flipCard);
+  window.addEventListener('resize', fitCurrentFlashcardText);
 
   function flipCardIfNeeded(flag) {
     flipped = flag;
