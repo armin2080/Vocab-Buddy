@@ -1,5 +1,6 @@
 /__pycache__
 /.env
+/.env.local
 vocab_buddy.db
 vocab_buddy.log
 /staticfiles/
