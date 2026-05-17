@@ -202,3 +202,41 @@
 #card-back {
   transform: rotateY(180deg);
 }
+
+.flashcard-face {
+  padding: 2rem;
+  font-size: 48px;
+  font-weight: 600;
+  line-height: 1.15;
+  text-align: center;
+  overflow: hidden;
+  overflow-wrap: anywhere;
+  word-break: break-word;
+  hyphens: auto;
+}
+
+.flashcard-review {
+  overflow-wrap: anywhere;
+}
+
+@media (max-width: 640px) {
+  .flashcard-review h2 {
+    margin-bottom: 0.75rem;
+    font-size: 1.35rem;
+  }
+
+  #card-container {
+    height: 20rem;
+    margin-bottom: 1rem;
+  }
+
+  #card-level-badge {
+    top: 0.75rem;
+    left: 0.75rem;
+  }
+
+  .flashcard-face {
+    padding: 1rem;
+    font-size: 48px;
+  }
+}
