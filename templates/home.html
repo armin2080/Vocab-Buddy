@@ -76,20 +76,6 @@
                 {% endif %}
             </div>
 
-            <!-- Quick Actions -->
-            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <div class="bg-gradient-to-br from-primary to-primary/80 rounded-xl p-6 text-white">
-                    <h3 class="mb-2">Continue Learning</h3>
-                    <p class="mb-4 opacity-90" style="font-size:14px;">Practice your flash cards and reinforce what you've learned.</p>
-                    <a href="{% url 'learning:review_start' %}" class="bg-white text-primary px-4 py-2 rounded-lg hover:bg-white/90 transition-colors" style="font-size:14px;">Start Practice</a>
-                </div>
-
-                <div class="bg-gradient-to-br from-accent to-accent/80 rounded-xl p-6 text-white">
-                    <h3 class="mb-2">Take a Quiz</h3>
-                    <p class="mb-4 opacity-90" style="font-size:14px;">Test your knowledge and track your progress.</p>
-                    <a href="{% url 'learning:quiz_start' %}" class="bg-white text-accent px-4 py-2 rounded-lg hover:bg-white/90 transition-colors" style="font-size:14px;">Start Quiz</a>
-                </div>
-            </div>
         {% else %}
             <div class="mt-12 space-y-6">
                 <p class="text-lg text-muted-foreground">Get started by signing in or creating a new account.</p>
