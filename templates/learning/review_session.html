@@ -1,7 +1,7 @@
 {% extends 'base.html' %}
 
 {% block content %}
-<div class="max-w-3xl mx-auto">
+<div class="flashcard-review -mx-2 w-auto sm:mx-auto sm:w-full max-w-3xl">
   <h2 class="text-2xl font-bold mb-4">📚 Review Session</h2>
 
   <!-- Progress -->
@@ -20,21 +20,21 @@
     <div id="card-flip-zone" class="absolute inset-0" style="cursor:pointer">
       <div id="card-level-badge" class="absolute top-4 left-4 bg-secondary text-foreground px-3 py-1 rounded-full text-sm font-medium">{% if cards and cards.0.level %}{{ cards.0.level }}{% else %}LEVEL{% endif %}</div>
       <div id="card-inner" class="absolute inset-0 rounded-2xl" style="transform-style:preserve-3d;">
-        <div id="card-front" class="absolute inset-0 bg-card rounded-2xl border-2 border-primary shadow-lg flex items-center justify-center p-8 backface-hidden" style="transform:rotateY(0deg); -webkit-backface-visibility:hidden; backface-visibility:hidden; font-size:48px; font-weight:600;">{% if cards and cards.0.front %}{{ cards.0.front }}{% endif %}</div>
-        <div id="card-back" class="absolute inset-0 rounded-2xl border-2 border-primary shadow-lg flex items-center justify-center p-8 backface-hidden" style="transform:rotateY(180deg); -webkit-backface-visibility:hidden; backface-visibility:hidden; color:white; font-size:48px; font-weight:600; background: linear-gradient(135deg, var(--primary, #3b82f6), rgba(59, 130, 246, 0.5));">{% if cards and cards.0.back %}{{ cards.0.back }}{% endif %}</div>
+        <div id="card-front" class="flashcard-face absolute inset-0 bg-card rounded-2xl border-2 border-primary shadow-lg flex items-center justify-center backface-hidden" style="transform:rotateY(0deg); -webkit-backface-visibility:hidden; backface-visibility:hidden;">{% if cards and cards.0.front %}{{ cards.0.front }}{% endif %}</div>
+        <div id="card-back" class="flashcard-face absolute inset-0 rounded-2xl border-2 border-primary shadow-lg flex items-center justify-center backface-hidden" style="transform:rotateY(180deg); -webkit-backface-visibility:hidden; backface-visibility:hidden; color:white; background: linear-gradient(135deg, var(--primary, #3b82f6), rgba(59, 130, 246, 0.5));">{% if cards and cards.0.back %}{{ cards.0.back }}{% endif %}</div>
       </div>
     </div>
   </div>
 
   <!-- Controls -->
-  <div class="flex items-center justify-center gap-4 mb-6">
-    <button id="card-prev" class="flex items-center gap-2 px-6 py-3 bg-secondary text-foreground rounded-lg hover:bg-secondary/80">Previous</button>
-    <button id="card-next" class="flex items-center gap-2 px-6 py-3 bg-primary text-white rounded-lg hover:bg-primary/90">Next</button>
+  <div class="flex items-center justify-center gap-2 sm:gap-4 mb-6">
+    <button id="card-prev" class="flex items-center gap-2 px-5 sm:px-6 py-3 bg-secondary text-foreground rounded-lg hover:bg-secondary/80">Previous</button>
+    <button id="card-next" class="flex items-center gap-2 px-5 sm:px-6 py-3 bg-primary text-white rounded-lg hover:bg-primary/90">Next</button>
   </div>
 
   <!-- Examples & Paragraph -->
-  <div class="space-y-4">
-    <div class="bg-green-50 border border-green-200 rounded-lg p-4">
+  <div class="space-y-3 sm:space-y-4">
+    <div class="bg-green-50 border border-green-200 rounded-lg p-3 sm:p-4">
       <h3 class="font-semibold text-green-900 mb-3">💡 Example Sentences</h3>
       <ul id="card-examples" class="space-y-2 text-sm text-foreground">
         {% if cards and cards.0.examples %}
@@ -45,7 +45,7 @@
       </ul>
     </div>
 
-    <div id="verb-section" class="bg-purple-50 border border-purple-200 rounded-lg p-4" style="{% if not cards or not cards.0.is_verb %}display:none;{% endif %}">
+    <div id="verb-section" class="bg-purple-50 border border-purple-200 rounded-lg p-3 sm:p-4" style="{% if not cards or not cards.0.is_verb %}display:none;{% endif %}">
       <h3 class="font-semibold text-purple-900 mb-3">🧩 Verb Forms</h3>
       <div class="overflow-x-auto space-y-4">
         <table class="w-full text-sm border border-purple-200 rounded-lg overflow-hidden">
