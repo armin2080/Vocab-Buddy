@@ -1,5 +1,10 @@
 /__pycache__
-/env
+/.env
 vocab_buddy.db
-config.json
 vocab_buddy.log
+/staticfiles/
+*.pyc
+**/__pycache__/
+.DS_Store
+*.log
+db.sqlite3
