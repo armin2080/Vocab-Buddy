@@ -102,9 +102,14 @@ pip install -r requirements.txt
 ```
 
 ### 4. Configure Environment
-Create a `.env` file in the project root with your Groq API key:
+Create a `.env.local` file in the project root with your Groq API key:
 ```bash
-export GROQ_API_KEY="your_groq_api_key_here"
+cp .env.local.example .env.local
+```
+
+Then edit `.env.local`:
+```bash
+GROQ_API_KEY=your_groq_api_key_here
 ```
 
 Or add it to `Vocab_Buddy/settings.py`:
