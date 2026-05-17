@@ -53,10 +53,10 @@ def register_view(request):
     return render(request, 'authentication/register.html', {'form': form})
 
 
-@login_required(login_url='login')
+@login_required(login_url='authentication:login')
 def logout_view(request):
     """Handle user logout."""
     username = request.user.username
     logout(request)
     messages.success(request, f"You have been logged out. Goodbye, {username}!")
-    return redirect('login')
+    return redirect('authentication:login')
