@@ -1,422 +1,381 @@
-# 🇩🇪 Vocab Buddy - German Vocabulary Learning Bot
+# 🇩🇪 Vocab Buddy - German Vocabulary Learning Web App
 
-[![Python](https://img.shields.io/badge/Python-3.8+-blue.svg)](https://python.org)
-[![Telegram Bot](https://img.shields.io/badge/Telegram-Bot-blue.svg)](https://core.telegram.org/bots)
+[![Python](https://img.shields.io/badge/Python-3.12-blue.svg)](https://python.org)
+[![Django](https://img.shields.io/badge/Django-6.0-green.svg)](https://djangoproject.com)
 [![Groq AI](https://img.shields.io/badge/AI-Groq-green.svg)](https://groq.com)
+[![PWA](https://img.shields.io/badge/PWA-Ready-blueviolet.svg)](#pwa-support)
 [![License](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 
-A smart Telegram bot designed to help users learn German vocabulary through spaced repetition, interactive review sessions, and AI-powered language validation.
-
-## 🚀 **[Try the Bot Now!](https://t.me/vocabularyBuddy_bot)**
-
-**Ready to start learning German? Click the link above to begin your vocabulary journey!** 📚✨
-
-Simply search for `@vocabularyBuddy_bot` on Telegram or use the direct link: https://t.me/vocabularyBuddy_bot
+A modern Django web application designed to help users learn German vocabulary through spaced repetition, interactive flashcard review, AI-powered language validation, personalized quizzes, and a responsive mobile-first interface with PWA support.
 
 ## 📋 Table of Contents
 
 - [Features](#-features)
 - [Prerequisites](#-prerequisites)
 - [Installation](#-installation)
+- [Running the Application](#-running-the-application)
 - [Configuration](#-configuration)
 - [Usage](#-usage)
-- [Bot Commands](#-bot-commands)
 - [Project Structure](#-project-structure)
-- [Database Schema](#-database-schema)
-- [Logging](#-logging)
-- [Architecture](#-architecture)
-- [Development](#-development-workflow)
-- [Contributing](#-contributing)
+- [Technology Stack](#-technology-stack)
+- [PWA Support](#-pwa-support)
+- [Deployment](#-deployment)
 - [License](#-license)
-
----
-
-## 🌟 What's New
-
-### ✨ Latest Updates
-- 🇩🇪 **German Language Validation**: AI now ensures only authentic German words are accepted
-- 📚 **Enhanced Help System**: Comprehensive `/help` command with detailed guides
-- 🔧 **Improved Error Handling**: Better user feedback for invalid inputs
-- 🎯 **Word Type Preservation**: Maintains correct grammatical forms (adjectives, verbs, nouns)
-- 🔄 **Retry Logic**: Users can immediately correct mistakes during word addition
-- 👑 **Admin Management System**: Complete admin toolkit with user management and broadcast messaging
-- 📢 **Broadcast Announcements**: Admins can send announcements to all users with delivery tracking
-- 🧠 **Interactive Quiz System**: New multiple-choice vocabulary quizzes with scoring and performance tracking
 
 ---
 
 ## ✨ Features
 
-### 🎯 Core Functionality
-- **Smart Word Addition**: AI-powered word analysis with automatic CEFR level classification
-- **German Language Validation**: Ensures only authentic German words are accepted
-- **Spaced Repetition Algorithm**: Intelligent word selection based on review frequency and performance
-- **Interactive Review Sessions**: Step-by-step vocabulary practice with examples and contextual paragraphs
-- **Multiple-Choice Quizzes**: Test knowledge with randomized quiz questions and instant feedback
-- **Vocabulary Management**: Personal word list with easy removal and organization by CEFR levels
-- **Comprehensive Help System**: Built-in `/help` command with detailed usage instructions
+### 🎯 Core Learning Features
+- **Smart Word Addition**: Add German words with AI-powered metadata extraction
+- **German Language Validation**: AI ensures only authentic German words are accepted
+- **Automatic CEFR Classification**: Words categorized by proficiency level (A1–C2)
+- **Example Sentences**: AI-generated contextual examples for each word
+- **Verb Conjugations**: Automatic parsing and storage of all verb forms (present, past, perfect)
+- **Interactive Flashcards**: Flip-based card system with examples and verb conjugations
+- **Spaced Repetition Algorithm**: Intelligent word selection based on mastery level and review frequency
+- **Multiple-Choice Quizzes**: Test knowledge with randomized questions and instant feedback
 
-### 📊 Analytics & Community
-- **Community Statistics**: View most popular words across all users by CEFR level
-- **Personal Progress Tracking**: Monitor review counts and learning progress
-- **Usage Analytics**: Comprehensive logging system for performance monitoring
+### 📊 Dashboard & Analytics
+- **Weekly Progress Chart**: Visual bar chart showing words added each day over the past week
+- **Study Streak**: Track consecutive days of vocabulary practice
+- **Learning Statistics**: Total words, mastered words, and words due for review
+- **Personal Vocabulary List**: Browse, search, and manage your word collection
 
-### 👑 Admin & Management
-- **Admin Access Control**: Secure admin-only command system with proper authorization
-- **User Management**: Complete user listing with registration dates and vocabulary statistics
-- **Bot Analytics**: Comprehensive statistics including active users, word counts, and review metrics
-- **Broadcast Messaging**: Send announcements to all users with delivery tracking and reporting
-- **Database Management**: Automatic schema upgrades and data integrity maintenance
-- **Comprehensive Logging**: All admin actions logged for security and audit purposes
+### 📱 User Interface
+- **Responsive Design**: Mobile-first layout that works on all devices
+- **Tailwind CSS Styling**: Modern, accessible interface matching the original frontend theme
+- **Server-Rendered Templates**: Fast, SEO-friendly Django templates (no JS framework required)
+- **Keyboard-Friendly**: Full keyboard navigation support for accessibility
+
+### 🌐 PWA Support
+- **Install as App**: Save the web app to your home screen on mobile and desktop
+- **Offline Support**: Service worker caches core assets for offline functionality
+- **Web Manifest**: Installable Progressive Web App with custom icons and theme colors
+- **Native App Experience**: Standalone display mode with app-like feel
 
 ### 🤖 AI Integration
-- **Groq AI Integration**: Automatic word translation and CEFR level estimation
-- **Language Detection**: Advanced AI validation to ensure German-only vocabulary
-- **Word Type Preservation**: Maintains correct grammatical forms (adjectives stay adjectives, etc.)
-- **Context Generation**: AI-generated example sentences and paragraphs using learned vocabulary
-- **Smart Error Handling**: Graceful handling of non-German inputs with helpful feedback
+- **Groq LLM**: Fast, cost-effective AI via Groq's language models
+- **Language Detection**: Validates German vs. non-German input
+- **Structured Parsing**: Extracts word metadata (translation, CEFR level, examples, verb forms)
+- **Fallback Verb Detection**: Automatic retry with enhanced prompts for verb forms
+- **Persistence**: AI-generated data stored at creation time for reliable rendering
+
+### 🔐 Authentication & Personalization
+- **User Accounts**: Secure registration and login system
+- **Per-User Vocabulary**: Each user maintains their own word list and progress
+- **Session Management**: Stateful sessions with automatic timeout
+- **Personalized Stats**: Dashboard tailored to each user's learning journey
+
+---
 
 ## 🔧 Prerequisites
 
-- Python 3.8 or higher
-- Telegram Bot Token (from [@BotFather](https://t.me/botfather))
-- Groq API Key (for AI functionality)
-- SQLite (included with Python)
+- **Python 3.12+**
+- **Django 6.0+**
+- **SQLite** (included with Python)
+- **Groq API Key** (for AI word processing)
+- **Pillow** (for icon generation; included in requirements)
 
 ## 🚀 Installation
 
-1. **Clone the repository**
-   ```bash
-   git clone https://github.com/armin2080/Vocab-Buddy.git
-   cd Vocab-Buddy
-   ```
+### 1. Clone the Repository
+```bash
+git clone https://github.com/armin2080/Vocab-Buddy.git
+cd Vocab-Buddy
+```
 
-2. **Create and activate virtual environment**
-   ```bash
-   python -m venv env
-   # Windows
-   .\env\Scripts\activate
-   # macOS/Linux
-   source env/bin/activate
-   ```
+### 2. Create and Activate Virtual Environment
+```bash
+python -m venv .env
 
-3. **Install dependencies**
-   ```bash
-   pip install -r requirements.txt
-   ```
+# macOS/Linux
+source .env/bin/activate
 
-4. **Set up configuration** (see [Configuration](#-configuration) section)
+# Windows
+.env\Scripts\activate
+```
 
-5. **Run the bot**
-   ```bash
-   python bot.py
-   ```
+### 3. Install Dependencies
+```bash
+pip install -r requirements.txt
+```
+
+### 4. Configure Environment
+Create a `.env` file in the project root with your Groq API key:
+```bash
+export GROQ_API_KEY="your_groq_api_key_here"
+```
+
+Or add it to `Vocab_Buddy/settings.py`:
+```python
+GROQ_API_KEY = "your_groq_api_key_here"
+```
+
+### 5. Initialize the Database
+```bash
+python manage.py migrate
+```
+
+### 6. Create a Superuser (Optional, for Django Admin)
+```bash
+python manage.py createsuperuser
+```
+
+### 7. Collect Static Files (Production)
+```bash
+python manage.py collectstatic --noinput
+```
+
+---
+
+## 🏃 Running the Application
+
+### Development Server
+```bash
+python manage.py runserver
+```
+
+The app will be available at `http://localhost:8000`
+
+### Production Deployment
+See [FRONTEND_DEPLOYMENT.md](FRONTEND_DEPLOYMENT.md) for detailed production setup instructions including:
+- Gunicorn configuration
+- Nginx reverse proxy setup
+- WhiteNoise static file serving
+- HTTPS/SSL configuration
+- PWA installability requirements
+
+---
 
 ## ⚙️ Configuration
 
-Create a `config.json` file in the project root:
-
-```json
-{
-  "BOT_TOKEN": "your_telegram_bot_token_here",
-  "AI_TOKEN": "your_groq_api_key_here",
-  "ADMIN_ID": 123456789
-}
+### Environment Variables
+```bash
+GROQ_API_KEY          # Required: Groq API key for AI features
+DEBUG                 # Optional: Set to False for production
+ALLOWED_HOSTS         # Optional: Comma-separated list of allowed hosts
+SECRET_KEY            # Optional: Django secret key (auto-generated if missing)
 ```
 
-### Getting API Keys
+### Django Settings
+Edit `Vocab_Buddy/settings.py` to customize:
+- Database backend
+- Static file storage
+- Email configuration
+- CORS settings
+- API keys
 
-1. **Telegram Bot Token**:
-   - Message [@BotFather](https://t.me/botfather) on Telegram
-   - Create a new bot with `/newbot`
-   - Follow the instructions and copy the token
+### Getting a Groq API Key
+1. Visit [Groq Console](https://console.groq.com/)
+2. Sign up for a free account
+3. Generate an API key in your dashboard
+4. Add to environment or settings as shown above
 
-2. **Groq API Key**:
-   - Visit [Groq Console](https://console.groq.com/)
-   - Sign up for an account
-   - Generate an API key in the dashboard
-
-3. **Admin ID (Optional)**:
-   - Get your Telegram user ID to enable admin features
-   - Start a chat with [@userinfobot](https://t.me/userinfobot) to find your ID
-   - Add this ID to enable admin commands and broadcast functionality
-   - If not set, admin features will be disabled
+---
 
 ## 📖 Usage
 
 ### Getting Started
+1. **Create Account**: Register with username and password
+2. **Add Words**: Click "Add Word" and enter German words
+3. **Review Vocabulary**: Use "Flash Cards" to review words with spaced repetition
+4. **Take Quizzes**: Test knowledge with "Quiz" mode
+5. **Track Progress**: View your "Home" dashboard for weekly progress and streak
 
-1. Start a conversation with your bot on Telegram
-2. Send `/start` to register and get welcome message
-3. Use `/help` to see all available commands and features
-4. Use `/add_word` to begin building your vocabulary (German words only!)
-5. Practice with `/review_words` when you have 5+ words
-6. Manage your vocabulary with `/my_words`
-7. Check community stats with `/top_words`
-
-### Typical Workflow
-
+### Typical Learning Workflow
 ```
-1. Learn commands (/help) → 2. Add German words → 3. Review regularly → 4. Track progress → 5. Expand vocabulary
+Register → Add German Words → Review with Flashcards → Take Quizzes → Track Progress
 ```
 
-## 🤖 Bot Commands
+### Key Pages
 
-| Command | Description | Requirements |
-|---------|-------------|--------------|
-| `/start` | Register/welcome message | None |
-| `/help` | Show comprehensive command guide and usage tips | None |
-| `/add_word` | Add new German word to vocabulary | German words only |
-| `/review_words` | Start interactive review session | 5+ words in vocabulary |
-| `/quiz` | Take vocabulary quiz with multiple-choice questions | 4+ words in vocabulary |
-| `/my_words` | View and manage personal vocabulary | None |
-| `/top_words` | View community word statistics | None |
-| `/cancel` | Cancel current conversation (during word addition) | Active conversation |
+| Page | Description |
+|------|-------------|
+| **Home** | Dashboard with weekly progress chart, study streak, and learning stats |
+| **Flash Cards** | Interactive spaced repetition review session with examples and verb forms |
+| **Quiz** | Multiple-choice questions from your vocabulary (4+ words required) |
+| **Vocabulary** | Browse, search, and manage your word collection |
+| **Add Word** | Add new German words (AI extracts translation, CEFR level, examples, verb forms) |
 
-### � Admin Commands
-
-*Available only for configured administrators*
-
-| Command | Description | Requirements |
-|---------|-------------|--------------|
-| `/admin_help` | Show admin command help and documentation | Admin access |
-| `/admin_users` | List all registered users with detailed statistics | Admin access |
-| `/admin_stats` | Display comprehensive bot usage analytics | Admin access |
-| `/admin_broadcast` | Send announcements to all users | Admin access |
-
-#### 📢 Admin Broadcast Features
-- **Message Composition**: Interactive message creation with preview
-- **HTML Formatting Support**: Rich text formatting for announcements
-- **Delivery Tracking**: Real-time progress monitoring during broadcast
-- **Comprehensive Reporting**: Detailed success/failure statistics
-- **Professional Formatting**: Messages include admin header and signature
-- **Cancellation Option**: Ability to cancel broadcast before sending
-- **Error Handling**: Graceful handling of blocked users and delivery failures
-
-### �🔥 New Features
-
-#### 🧠 Interactive Quiz System
-- **Multiple-Choice Questions**: Test knowledge with 4-option questions
-- **Randomized Question Order**: Different quiz experience each time
-- **Smart Wrong Answers**: Incorrect options come from user's other vocabulary words
-- **Performance Scoring**: Detailed scoring with percentage and performance feedback
-- **Instant Feedback**: Immediate confirmation of correct/incorrect answers
-- **Question Review**: Complete review of all questions and correct answers
-- **Progress Tracking**: Monitor quiz performance to identify learning gaps
-- **Flexible Length**: Adaptive quiz length based on vocabulary size (up to 5 questions)
-
-#### 🇩🇪 German Language Validation
-- **Smart Detection**: AI automatically detects and rejects non-German words
-- **Helpful Feedback**: Clear messages guide users to enter German vocabulary
-- **Retry Logic**: Users can immediately try again with correct input
-- **Examples**: Bot explains what constitutes a valid German word
-
-#### 📚 Enhanced Help System
-- **Comprehensive Guide**: Detailed explanations of all features
-- **Getting Started Tutorial**: Step-by-step instructions for new users
-- **CEFR Level Guide**: Understanding of difficulty levels with color coding
-- **Learning Tips**: Best practices for effective vocabulary acquisition
-
-### Interactive Features
-
-- **Button-based confirmations** for word additions
-- **German language validation** with immediate feedback
-- **Step-by-step review process** with examples and paragraphs
-- **Vocabulary management interface** with easy word removal
-- **CEFR level organization** (A1, A2, B1, B2, C1, C2)
-- **Retry functionality** for incorrect inputs
-- **Comprehensive help system** accessible anytime
-
-### 🎯 Language Learning Features
-
-#### Word Type Preservation
-- **Adjectives stay adjectives** (schnell → schnell, not Schnelligkeit)
-- **Nouns include articles** (das Haus, der Mann, die Frau)
-- **Verbs in infinitive form** (laufen, sprechen, haben)
-- **Accurate translations** for each grammatical category
-
-#### Learning Methodology
-- **Spaced Repetition**: Words appear based on your mastery level
-- **Contextual Learning**: See words in sentences and paragraphs
-- **Progressive Difficulty**: CEFR levels from A1 (beginner) to C2 (advanced)
-- **Community Learning**: Discover popular words other learners are studying
+---
 
 ## 📁 Project Structure
 
 ```
 Vocab-Buddy/
-├── bot.py                 # Main bot application
-├── database.py           # Database management and word selection algorithms
-├── agent.py              # Groq AI client for word processing
-├── config.json           # Configuration file (not in repo)
-├── requirements.txt      # Python dependencies
-├── vocab_buddy.db        # SQLite database (auto-generated)
-├── vocab_buddy.log       # Application logs (auto-generated)
-├── .gitignore           # Git ignore rules
-├── LICENSE              # Project license
-└── README.md            # This file
+├── Vocab_Buddy/              # Django project settings
+│   ├── settings.py           # Django configuration
+│   ├── urls.py               # URL routing
+│   ├── middleware.py         # Authentication middleware
+│   ├── context_processors.py # Template context helpers
+│   ├── streaks.py            # Study streak calculation
+│   └── pwa.py                # PWA manifest and service worker
+├── authentication/           # User registration and login
+│   ├── models.py
+│   ├── views.py
+│   ├── forms.py
+│   └── urls.py
+├── words/                    # Vocabulary management
+│   ├── models.py             # Word and UserWord models
+│   ├── views.py              # Add/list/delete word views
+│   ├── forms.py              # Word input validation and AI parsing
+│   └── urls.py
+├── learning/                 # Flashcards, quizzes, dashboard
+│   ├── models.py             # ReviewSession and QuizResult models
+│   ├── views.py              # Flashcard, quiz, and dashboard views
+│   ├── forms.py              # Review and quiz forms
+│   ├── scheduler.py          # Spaced repetition algorithm
+│   └── urls.py
+├── templates/                # Server-rendered HTML templates
+│   ├── base.html             # Base layout with header and navigation
+│   ├── home.html             # Dashboard with weekly chart and stats
+│   ├── authentication/       # Login and registration
+│   ├── words/                # Word list, add word forms
+│   └── learning/             # Flashcard and quiz templates
+├── static/                   # CSS, JavaScript, icons
+│   ├── css/
+│   │   ├── fonts.css         # Font definitions
+│   │   └── theme.css         # Theme variables and styling
+│   ├── js/
+│   │   ├── ui.js             # Flashcard interactivity
+│   │   └── verb-panel.js     # Verb conjugation table rendering
+│   └── icons/                # PWA app icons (generated from logo)
+│       ├── icon-192.png
+│       ├── icon-512.png
+│       ├── icon-maskable-512.png
+│       └── ...
+├── ai_service.py             # Groq AI service wrapper
+├── manage.py                 # Django management command
+├── requirements.txt          # Python dependencies
+├── db.sqlite3                # SQLite database (auto-created)
+└── README.md                 # This file
 ```
 
-## 🗄️ Database Schema
+---
 
-### Tables
+## 🏗️ Technology Stack
 
-**users**
-- `id` (INTEGER PRIMARY KEY)
-- `telegram_id` (INTEGER UNIQUE)
-- `username` (TEXT)
-- `created_at` (TIMESTAMP)
+### Backend
+- **Django 6.0.5**: Web framework with authentication, ORM, and admin
+- **Python 3.12**: Programming language
+- **SQLite**: Lightweight relational database
+- **Groq LLM**: AI for German language processing and word metadata
 
-**words**
-- `id` (INTEGER PRIMARY KEY)
-- `word` (TEXT UNIQUE)
-- `translation` (TEXT)
-- `cefr_level` (TEXT)
-- `created_at` (TIMESTAMP)
+### Frontend
+- **Tailwind CSS**: Utility-first CSS framework
+- **Vanilla JavaScript**: Interactive UI (flashcards, quizzes)
+- **Server-Rendered Templates**: Django template language for HTML generation
+- **Responsive Design**: Mobile-first approach with flexbox and media queries
 
-**words_users**
-- `id` (INTEGER PRIMARY KEY)
-- `user_id` (INTEGER FOREIGN KEY)
-- `word_id` (INTEGER FOREIGN KEY)
-- `review_count` (INTEGER DEFAULT 0)
-- `last_reviewed` (TIMESTAMP)
-- `created_at` (TIMESTAMP)
+### Deployment
+- **Gunicorn**: WSGI application server
+- **WhiteNoise**: Static file serving (production)
+- **Nginx**: Reverse proxy and load balancer (recommended)
 
-## 📊 Logging
+---
 
-The bot includes comprehensive logging for monitoring and debugging:
+## 🌐 PWA Support
 
-### Log Features
-- **File logging**: Saved to `vocab_buddy.log`
-- **Console output**: Real-time monitoring
-- **Structured format**: Timestamp, level, and emoji-coded messages
-- **User activity tracking**: All actions with user identification
-- **Error monitoring**: Detailed error reporting with context
+Vocab Buddy is a Progressive Web App (PWA) and can be installed on mobile and desktop devices.
 
-### Log Levels
-- `INFO`: Normal operations (user actions, successful operations)
-- `WARNING`: Non-critical issues (insufficient words, duplicates)
-- `ERROR`: Serious problems (API failures, database errors)
+### Features
+- **Installable**: Add to home screen on Android, iOS, and desktop browsers
+- **Offline Support**: Service worker caches critical assets and pages
+- **App Icon**: Custom 192×192 and 512×512 icons from your logo
+- **Splash Screen**: Branded loading experience
+- **Theme Color**: Custom theme color for address bar
 
-### Example Log Entry
-```
-2025-07-29 14:23:15 - __main__ - INFO - 🎉 Successfully added word 'Hund' to user john_doe's vocabulary
-```
+### Installation
 
-## 🏗️ Architecture
+#### Android/Chrome
+1. Open the app in Chrome
+2. Tap the menu (⋮) → "Install app"
+3. Confirm installation
 
-### Core Components
+#### iOS/Safari
+1. Open the app in Safari
+2. Tap Share → "Add to Home Screen"
+3. Confirm and launch
 
-1. **Bot Controller** (`bot.py`)
-   - Telegram API integration
-   - Command and callback handling
-   - User interface management
+#### Desktop (Chrome/Edge)
+1. Open the app
+2. Click the install icon in the address bar
+3. Confirm installation
 
-2. **Database Manager** (`database.py`)
-   - SQLite operations
-   - Spaced repetition algorithm
-   - Word selection logic
+### HTTPS Requirement
+PWA install prompts require **HTTPS** in production. Development (localhost) is exempt. For production, obtain an SSL certificate from:
+- Let's Encrypt (free)
+- Cloudflare (free tier available)
+- Other certificate authorities
 
-3. **AI Agent** (`agent.py`)
-   - Groq API integration
-   - German language detection and validation
-   - Word processing and translation with grammatical accuracy
-   - Content generation for examples and paragraphs
+---
 
-### Key Algorithms
+## 🚀 Deployment
 
-**German Language Validation**
-```python
-# AI validates input language before processing
-if ai_response.strip().lower() == "not german":
-    # Provide helpful feedback and retry opportunity
-    return WORD  # Keep conversation active
-```
+### Production Checklist
+- [ ] Set `DEBUG = False` in settings
+- [ ] Configure `ALLOWED_HOSTS` with your domain
+- [ ] Use a strong `SECRET_KEY`
+- [ ] Set up HTTPS with SSL certificate
+- [ ] Run `collectstatic` to compile static files
+- [ ] Use Gunicorn and Nginx
+- [ ] Configure environment variables (GROQ_API_KEY, etc.)
+- [ ] Set up database backups
+- [ ] Enable CSRF protection
 
-**Spaced Repetition Scoring**
-```python
-score = base_weight / (1 + review_count) * time_decay_factor
-```
+### Quick Deployment with Gunicorn & Nginx
 
-**Word Selection Strategy**
-- Prioritizes less-reviewed words
-- Considers time since last review
-- Ensures vocabulary diversity
-- Prevents duplicate selections
-- Maintains grammatical accuracy
+See [FRONTEND_DEPLOYMENT.md](FRONTEND_DEPLOYMENT.md) for detailed instructions including:
+- Gunicorn service configuration
+- Nginx reverse proxy setup
+- SSL certificate setup
+- Security hardening
 
-## 🔄 Development Workflow
-
-### Adding New Features
-
-1. **Database changes**: Update `database.py` and schema
-2. **Bot commands**: Add handlers in `bot.py`
-3. **AI integration**: Extend `agent.py` for new AI features
-4. **Language validation**: Ensure proper German language handling
-5. **Testing**: Test with various user scenarios including edge cases
-6. **Logging**: Add appropriate log statements for monitoring
-7. **Documentation**: Update README and comments
-
-### Code Style
-
-- Use descriptive function names and comments
-- Include logging for important operations
-- Follow Python PEP 8 style guidelines
-- Add error handling for external API calls
-
-## 🤝 Contributing
-
-1. Fork the repository
-2. Create a feature branch (`git checkout -b feature/new-feature`)
-3. Commit your changes (`git commit -am 'Add new feature'`)
-4. Push to the branch (`git push origin feature/new-feature`)
-5. Create a Pull Request
-
-### Contribution Guidelines
-
-- Ensure all new features include appropriate logging
-- Add tests for new functionality
-- Update documentation for user-facing changes
-- Follow existing code patterns and style
+---
 
 ## 📝 License
 
 This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
 
+---
+
 ## 🙏 Acknowledgments
 
-- **Telegram Bot API** for the excellent bot platform
-- **Groq** for powerful AI language processing
-- **Python-telegram-bot** library for seamless Telegram integration
-- **SQLite** for reliable local data storage
+- **Django**: Web framework powering the backend
+- **Groq**: Fast, cost-effective AI language models
+- **Tailwind CSS**: Modern utility-first styling
+- **Pillow**: Image processing for PWA icons
+- **SQLite**: Reliable embedded database
 
-## 📞 Support
+---
 
-For issues, questions, or feature requests:
+## 📞 Support & Feedback
 
-1. Check existing [GitHub Issues](https://github.com/armin2080/Vocab-Buddy/issues)
-2. Create a new issue with detailed description
-3. Include relevant log entries for bug reports
-4. Provide steps to reproduce problems
+For issues, questions, or suggestions:
 
-### 🐛 Common Issues
+1. Check [GitHub Issues](https://github.com/armin2080/Vocab-Buddy/issues)
+2. Create a new issue with detailed description and screenshots
+3. Include relevant error logs or console output
+
+### Common Issues
 
 **"Word not recognized as German"**
 - Ensure you're entering actual German words
-- Try different spellings or word forms
-- Check that special characters are included (ä, ö, ü, ß)
+- Check for correct spelling and special characters (ä, ö, ü, ß)
+- Try a different word to verify the system is working
 
 **"Not enough words for review"**
-- Add at least 5 words using `/add_word`
-- Each word must be confirmed and saved to your vocabulary
+- Add at least 5 words using the "Add Word" feature
+- Wait a moment for AI processing to complete
 
-**Bot not responding**
-- Check if the bot is online
-- Try `/start` to reinitialize your session
-- Contact support if issues persist
+**PWA not installing**
+- Ensure using HTTPS (production) or localhost (development)
+- Update your browser to the latest version
+- Try a different browser if issues persist
 
 ---
 
 **Happy Learning! 🎓📚**
 
-*Vocab Buddy - Making German vocabulary learning interactive, accurate, and fun!*
+*Vocab Buddy - Making German vocabulary learning interactive, personalized, and fun!*
