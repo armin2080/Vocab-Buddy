@@ -9,6 +9,7 @@ def manifest(request):
     payload = {
         'name': 'Vocab Buddy',
         'short_name': 'Vocab Buddy',
+        'id': reverse('home'),
         'start_url': reverse('home'),
         'scope': '/',
         'display': 'standalone',
@@ -20,11 +21,13 @@ def manifest(request):
                 'src': static('icons/icon-192.png'),
                 'sizes': '192x192',
                 'type': 'image/png',
+                'purpose': 'any',
             },
             {
                 'src': static('icons/icon-512.png'),
                 'sizes': '512x512',
                 'type': 'image/png',
+                'purpose': 'any',
             },
             {
                 'src': static('icons/icon-maskable-512.png'),
@@ -46,8 +49,8 @@ def service_worker(request):
         reverse('learning:quiz_start'),
         static('css/fonts.css'),
         static('css/theme.css'),
-        static('js/ui.js?v=3'),
-        static('js/verb-panel.js?v=1'),
+        f"{static('js/ui.js')}?v=3",
+        f"{static('js/verb-panel.js')}?v=1",
         static('icons/icon-192.png'),
         static('icons/icon-512.png'),
         static('icons/apple-touch-icon.png'),
