@@ -1,0 +1,43 @@
+{% extends 'base.html' %}
+
+{% block title %}Grammar - Vocab Buddy{% endblock %}
+
+{% block content %}
+<div class="space-y-6">
+    <div class="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
+        <div>
+            <div class="mb-2 inline-flex rounded-lg px-3 py-1 text-primary" style="background-color: rgba(91, 127, 255, 0.1); font-size:12px; font-weight:500;">
+                German grammar
+            </div>
+            <h1 class="text-foreground text-2xl font-semibold">Grammar Topics</h1>
+            <p class="mt-1 text-muted-foreground" style="font-size:14px;">Short lessons with quick practice for the grammar you will meet most often.</p>
+        </div>
+        <a href="{% url 'grammar:coach' %}" class="inline-flex rounded-lg bg-primary px-4 py-2 text-white hover:opacity-95" style="font-size:14px; font-weight:500;">Grammar Coach</a>
+    </div>
+
+    <div class="space-y-5">
+        {% for group in topics_by_level %}
+            {% if group.topics %}
+                <section>
+                    <div class="mb-3 flex items-center gap-2">
+                        <span class="rounded-md bg-primary px-2 py-1 text-white" style="font-size:12px; font-weight:600;">{{ group.level }}</span>
+                        <h2 class="text-lg font-semibold text-foreground">{{ group.level }} topics</h2>
+                    </div>
+                    <div class="grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-3">
+                        {% for topic in group.topics %}
+                            <a href="{% url 'grammar:topic_detail' topic.slug %}" class="block rounded-lg border border-border bg-card p-4 shadow-sm transition hover:border-primary">
+                                <div class="flex items-start justify-between gap-3">
+                                    <h3 class="font-semibold text-foreground">{{ topic.title }}</h3>
+                                    <span class="rounded-md {{ topic.progress_class }} px-2 py-1" style="font-size:12px;">{{ topic.progress_label }}</span>
+                                </div>
+                                <p class="mt-2 text-muted-foreground" style="font-size:14px;">{{ topic.summary }}</p>
+                                <p class="mt-3 text-muted-foreground" style="font-size:12px;">{{ topic.exercises.count }} exercises</p>
+                            </a>
+                        {% endfor %}
+                    </div>
+                </section>
+            {% endif %}
+        {% endfor %}
+    </div>
+</div>
+{% endblock %}

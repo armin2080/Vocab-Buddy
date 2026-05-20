@@ -1,0 +1,35 @@
+{% extends 'base.html' %}
+
+{% block title %}Grammar Results - Vocab Buddy{% endblock %}
+
+{% block content %}
+<div class="mx-auto w-full max-w-4xl space-y-5">
+    <div class="rounded-lg border border-border bg-card p-5 shadow-sm">
+        <div class="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+            <div>
+                <span class="mb-2 inline-flex rounded-md bg-primary px-2 py-1 text-white" style="font-size:12px; font-weight:600;">{{ topic.cefr_level }}</span>
+                <h1 class="text-2xl font-semibold text-foreground">{{ topic.title }} Results</h1>
+                <p class="mt-2 text-muted-foreground" style="font-size:14px;">You scored {{ correct }}/{{ total }} correct.</p>
+            </div>
+            <div class="rounded-lg {% if accuracy == 100 %}bg-success{% else %}bg-accent{% endif %} px-4 py-2 text-white" style="font-size:18px; font-weight:700;">{{ accuracy }}%</div>
+        </div>
+    </div>
+
+    <div class="space-y-3">
+        {% for row in rows %}
+            <div class="rounded-lg border border-border bg-card p-4 shadow-sm">
+                <div class="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
+                    <h2 class="font-semibold text-foreground">{{ forloop.counter }}. {{ row.exercise.prompt }}</h2>
+                    <span class="rounded-md {% if row.is_correct %}bg-success{% else %}bg-destructive{% endif %} px-2 py-1 text-white" style="font-size:12px;">{% if row.is_correct %}Correct{% else %}Review{% endif %}</span>
+                </div>
+                <p class="mt-2 text-muted-foreground" style="font-size:14px;">Correct answer: {{ row.exercise.correct_option }}. {{ row.exercise.explanation }}</p>
+            </div>
+        {% endfor %}
+    </div>
+
+    <div class="flex flex-wrap gap-3">
+        <a href="{% url 'grammar:exercise' topic.slug %}" class="rounded-lg bg-primary px-4 py-2 text-white hover:opacity-95" style="font-size:14px; font-weight:500;">Practice Again</a>
+        <a href="{% url 'grammar:topic_list' %}" class="rounded-lg border border-border bg-card px-4 py-2 text-foreground hover:bg-secondary" style="font-size:14px; font-weight:500;">All Grammar Topics</a>
+    </div>
+</div>
+{% endblock %}
