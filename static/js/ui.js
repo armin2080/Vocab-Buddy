@@ -19,6 +19,7 @@ document.addEventListener('DOMContentLoaded', function () {
   let flipped = false;
   let autoplayId = null;
   const reviewedSet = new Set();
+  const incorrectSet = new Set();
   let historyStack = [];
 
   function totalWeight() {
@@ -39,12 +40,8 @@ document.addEventListener('DOMContentLoaded', function () {
   }
 
   function buildDeck() {
-    const built = [];
-    cards.forEach((c, idx) => {
-      const w = Math.max(1, Math.min(10, Number(c.weight) || 1));
-      for (let i = 0; i < w; i++) built.push(idx);
-    });
-    deck = shuffle(built);
+    const built = cards.map((_, idx) => idx);
+    deck = built;
     deckPos = -1;
   }
 
@@ -171,21 +168,21 @@ document.addEventListener('DOMContentLoaded', function () {
       perfectBody.innerHTML = '';
       pastBody.innerHTML = '';
     }
-    // show level as small label
+    // Reflect current position in the deck so Previous/Next updates are intuitive.
     idxEl.textContent = `${reviewedSet.size + 1} / ${cards.length}`;
     const reviewedPct = Math.round(((reviewedSet.size + 1) / cards.length) * 100);
     if (pctEl) pctEl.textContent = `${reviewedPct}% Complete`;
     document.getElementById('progress-bar').style.width = `${reviewedPct}%`;
     // mark reviewed
     if (currentCard && currentCard.pk) reviewedSet.add(currentCard.pk);
+    updateReviewInputs();
     if (pushHistory) {
       // avoid pushing duplicate consecutive indices
       if (historyStack.length === 0 || historyStack[historyStack.length - 1] !== currentIndex) {
         historyStack.push(currentIndex);
       }
     }
-    const reviewedInput = document.getElementById('reviewed-pks-input');
-    if (reviewedInput) reviewedInput.value = Array.from(reviewedSet).join(',');
+    updateReviewInputs();
     // reset flip state visually
     const container = document.getElementById('card-container');
     const inner = document.getElementById('card-inner');
@@ -193,6 +190,7 @@ document.addEventListener('DOMContentLoaded', function () {
     if (inner) inner.style.transform = 'rotateY(0deg)';
     const levelBadge = document.getElementById('card-level-badge');
     if (levelBadge) levelBadge.textContent = currentCard.level || '';
+    updateNavButtons();
   }
 
   function showPreviousCard() {
@@ -206,6 +204,18 @@ document.addEventListener('DOMContentLoaded', function () {
     if (!deck.length) buildDeck();
     deckPos = (deckPos + 1) % deck.length;
     showCardByIndex(deck[deckPos]);
+  }
+
+  function updateReviewInputs() {
+    const reviewedInput = document.getElementById('reviewed-pks-input');
+    if (reviewedInput) reviewedInput.value = Array.from(reviewedSet).join(',');
+    const incorrectInput = document.getElementById('incorrect-pks-input');
+    if (incorrectInput) incorrectInput.value = Array.from(incorrectSet).join(',');
+  }
+
+  function submitReviewComplete() {
+    const form = document.getElementById('review-complete-form');
+    if (form) form.submit();
   }
 
   function flipCard() {
@@ -224,9 +234,29 @@ document.addEventListener('DOMContentLoaded', function () {
     }
   }
 
-  document.getElementById('card-next')?.addEventListener('click', function () { flipCardIfNeeded(false); pickAndShow(); });
-  document.getElementById('card-prev')?.addEventListener('click', function () { flipCardIfNeeded(false); showPreviousCard(); });
   document.getElementById('card-flip-zone')?.addEventListener('click', flipCard);
+  document.getElementById('card-correct')?.addEventListener('click', function () {
+    if (!currentCard || !currentCard.pk) return;
+    reviewedSet.add(currentCard.pk);
+    incorrectSet.delete(currentCard.pk);
+    updateReviewInputs();
+    if (deckPos >= deck.length - 1) {
+      submitReviewComplete();
+      return;
+    }
+    pickAndShow();
+  });
+  document.getElementById('card-incorrect')?.addEventListener('click', function () {
+    if (!currentCard || !currentCard.pk) return;
+    reviewedSet.add(currentCard.pk);
+    incorrectSet.add(currentCard.pk);
+    updateReviewInputs();
+    if (deckPos >= deck.length - 1) {
+      submitReviewComplete();
+      return;
+    }
+    pickAndShow();
+  });
   window.addEventListener('resize', fitCurrentFlashcardText);
 
   function flipCardIfNeeded(flag) {
