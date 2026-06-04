@@ -26,10 +26,9 @@
     </div>
   </div>
 
-  <!-- Controls -->
   <div class="flex items-center justify-center gap-2 sm:gap-4 mb-6">
-    <button id="card-prev" class="flex items-center gap-2 px-5 sm:px-6 py-3 bg-secondary text-foreground rounded-lg hover:bg-secondary/80">Previous</button>
-    <button id="card-next" class="flex items-center gap-2 px-5 sm:px-6 py-3 bg-primary text-white rounded-lg hover:bg-primary/90">Next</button>
+    <button id="card-incorrect" type="button" class="flex items-center gap-2 px-5 sm:px-6 py-3 bg-destructive text-white rounded-lg hover:bg-destructive/90">Incorrect</button>
+    <button id="card-correct" type="button" class="flex items-center gap-2 px-5 sm:px-6 py-3 bg-success text-white rounded-lg hover:bg-success/90">Correct</button>
   </div>
 
   <!-- Examples & Paragraph -->
@@ -89,6 +88,7 @@
   <form method="post" action="{% url 'learning:review_next' %}" class="mt-6" id="review-complete-form">
     {% csrf_token %}
     <input type="hidden" name="reviewed_pks" id="reviewed-pks-input" value="" />
+    <input type="hidden" name="incorrect_pks" id="incorrect-pks-input" value="" />
     <button type="submit" class="w-full bg-green-600 hover:bg-green-700 text-white font-bold py-3 px-4 rounded">✅ Complete Review</button>
   </form>
 

@@ -19,6 +19,7 @@ document.addEventListener('DOMContentLoaded', function () {
   let flipped = false;
   let autoplayId = null;
   const reviewedSet = new Set();
+  const incorrectSet = new Set();
   let historyStack = [];
 
   function totalWeight() {
@@ -30,22 +31,24 @@ document.addEventListener('DOMContentLoaded', function () {
     }
   }
 
-  function shuffle(array) {
-    for (let i = array.length - 1; i > 0; i--) {
-      const j = Math.floor(Math.random() * (i + 1));
-      [array[i], array[j]] = [array[j], array[i]];
-    }
-    return array;
+  function buildDeck() {
+    const built = cards.map((_, idx) => idx);
+    deck = built;
+    deckPos = -1;
   }
 
-  function buildDeck() {
-    const built = [];
-    cards.forEach((c, idx) => {
-      const w = Math.max(1, Math.min(10, Number(c.weight) || 1));
-      for (let i = 0; i < w; i++) built.push(idx);
-    });
-    deck = shuffle(built);
-    deckPos = -1;
+  function updateNavButtons() {
+    const nextBtn = document.getElementById('card-next');
+    const prevBtn = document.getElementById('card-prev');
+    if (!nextBtn || !prevBtn) return;
+    const atStart = deckPos <= 0;
+    const atEnd = deckPos >= deck.length - 1;
+    prevBtn.disabled = atStart;
+    nextBtn.disabled = atEnd;
+    prevBtn.classList.toggle('opacity-50', atStart);
+    prevBtn.classList.toggle('cursor-not-allowed', atStart);
+    nextBtn.classList.toggle('opacity-50', atEnd);
+    nextBtn.classList.toggle('cursor-not-allowed', atEnd);
   }
 
   function escapeHtml(value) {
@@ -127,6 +130,14 @@ document.addEventListener('DOMContentLoaded', function () {
     pastBody.innerHTML = renderRows(data.past_rows || []);
   }
 
+  
+  function updateReviewInputs() {
+    const reviewedInput = document.getElementById('reviewed-pks-input');
+    if (reviewedInput) reviewedInput.value = Array.from(reviewedSet).join(',');
+    const incorrectInput = document.getElementById('incorrect-pks-input');
+    if (incorrectInput) incorrectInput.value = Array.from(incorrectSet).join(',');
+  }
+
   function showCardByIndex(i, pushHistory = true) {
     if (!cards.length) return;
     currentIndex = i % cards.length;
@@ -178,14 +189,14 @@ document.addEventListener('DOMContentLoaded', function () {
     document.getElementById('progress-bar').style.width = `${reviewedPct}%`;
     // mark reviewed
     if (currentCard && currentCard.pk) reviewedSet.add(currentCard.pk);
+    updateReviewInputs();
     if (pushHistory) {
       // avoid pushing duplicate consecutive indices
       if (historyStack.length === 0 || historyStack[historyStack.length - 1] !== currentIndex) {
         historyStack.push(currentIndex);
       }
     }
-    const reviewedInput = document.getElementById('reviewed-pks-input');
-    if (reviewedInput) reviewedInput.value = Array.from(reviewedSet).join(',');
+    updateReviewInputs();
     // reset flip state visually
     const container = document.getElementById('card-container');
     const inner = document.getElementById('card-inner');
@@ -197,15 +208,29 @@ document.addEventListener('DOMContentLoaded', function () {
 
   function showPreviousCard() {
     if (!deck.length) return;
+    if (deckPos <= 0) {
+      updateNavButtons();
+      return;
+    }
     deckPos = Math.max(0, deckPos - 1);
     showCardByIndex(deck[deckPos], false);
+    updateNavButtons();
   }
 
   function pickAndShow() {
     if (!cards.length) return;
     if (!deck.length) buildDeck();
-    deckPos = (deckPos + 1) % deck.length;
+    if (deckPos >= deck.length - 1) {
+      submitReviewComplete();
+      return;
+    }
+    deckPos = deckPos + 1;
     showCardByIndex(deck[deckPos]);
+  }
+
+  function submitReviewComplete() {
+    const form = document.getElementById('review-complete-form');
+    if (form) form.submit();
   }
 
   function flipCard() {
@@ -224,9 +249,29 @@ document.addEventListener('DOMContentLoaded', function () {
     }
   }
 
-  document.getElementById('card-next')?.addEventListener('click', function () { flipCardIfNeeded(false); pickAndShow(); });
-  document.getElementById('card-prev')?.addEventListener('click', function () { flipCardIfNeeded(false); showPreviousCard(); });
   document.getElementById('card-flip-zone')?.addEventListener('click', flipCard);
+  document.getElementById('card-correct')?.addEventListener('click', function () {
+    if (!currentCard || !currentCard.pk) return;
+    reviewedSet.add(currentCard.pk);
+    incorrectSet.delete(currentCard.pk);
+    updateReviewInputs();
+    if (deckPos >= deck.length - 1) {
+      submitReviewComplete();
+      return;
+    }
+    pickAndShow();
+  });
+  document.getElementById('card-incorrect')?.addEventListener('click', function () {
+    if (!currentCard || !currentCard.pk) return;
+    reviewedSet.add(currentCard.pk);
+    incorrectSet.add(currentCard.pk);
+    updateReviewInputs();
+    if (deckPos >= deck.length - 1) {
+      submitReviewComplete();
+      return;
+    }
+    pickAndShow();
+  });
   window.addEventListener('resize', fitCurrentFlashcardText);
 
   function flipCardIfNeeded(flag) {
@@ -245,6 +290,7 @@ document.addEventListener('DOMContentLoaded', function () {
     if (cards.length) {
       buildDeck();
       pickAndShow();
+      updateNavButtons();
     }
   } catch (err) {
     console.error('Flashcards initialization error:', err);

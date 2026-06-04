@@ -1,12 +1,16 @@
 from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib.auth.decorators import login_required
+from django.urls import reverse
 from django.contrib import messages
+import time
+from django.views.decorators.cache import never_cache
 from django.db.models import Q
 from .models import Word, UserWord
 from .forms import AddWordForm
 
 
 @login_required(login_url='authentication:login')
+@never_cache
 def word_list(request):
     """List all words in user's vocabulary"""
     user_words = UserWord.objects.filter(user=request.user).select_related('word').order_by('-added_at')
@@ -105,7 +109,7 @@ def add_word(request):
                     f'ℹ️ You already have "{word_text}" in your vocabulary.'
                 )
             
-            return redirect('words:word_list')
+            return redirect(f"{reverse('words:word_list')}?refresh={int(time.time())}")
     else:
         form = AddWordForm()
     
@@ -135,7 +139,7 @@ def delete_word(request, pk):
     if request.method == 'POST':
         user_word.delete()
         messages.success(request, f'✅ Word "{word_text}" has been removed from your vocabulary.')
-        return redirect('words:word_list')
+        return redirect(f"{reverse('words:word_list')}?refresh={int(time.time())}")
     
     context = {'user_word': user_word}
     return render(request, 'words/delete_word.html', context)

@@ -16,6 +16,7 @@ Including another URLconf
 """
 from django.contrib import admin
 from django.urls import path, include
+from django.contrib.staticfiles.urls import staticfiles_urlpatterns
 from learning import views as learning_views
 from . import pwa
 
@@ -28,3 +29,5 @@ urlpatterns = [
     path('words/', include('words.urls')),
     path('learning/', include('learning.urls')),
 ]
+
+urlpatterns += staticfiles_urlpatterns()

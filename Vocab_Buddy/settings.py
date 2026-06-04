@@ -43,10 +43,32 @@ load_local_env(BASE_DIR / '.env.local')
 SECRET_KEY = 'django-insecure--dm-x=9-^!nip&cu69==(ov#wj2vm#a!!=*#w+!$r4!_+d-8rf'
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = True
+DEBUG = os.environ.get('DJANGO_DEBUG', 'true').lower() in {'1', 'true', 'yes'}
 
-ALLOWED_HOSTS = []
 
+def parse_csv_env(name):
+    return [value.strip() for value in os.environ.get(name, '').split(',') if value.strip()]
+
+
+ALLOWED_HOSTS = parse_csv_env('DJANGO_ALLOWED_HOSTS')
+if DEBUG and not ALLOWED_HOSTS:
+    ALLOWED_HOSTS = ['localhost', '127.0.0.1']
+
+CSRF_TRUSTED_ORIGINS = parse_csv_env('DJANGO_CSRF_TRUSTED_ORIGINS')
+
+USE_X_FORWARDED_HOST = os.environ.get('DJANGO_USE_X_FORWARDED_HOST', 'false').lower() in {
+    '1', 'true', 'yes'
+}
+
+if os.environ.get('DJANGO_SECURE_PROXY_SSL_HEADER', '').lower() in {'1', 'true', 'yes'}:
+    SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
+
+SESSION_COOKIE_SECURE = os.environ.get('DJANGO_SESSION_COOKIE_SECURE', 'false').lower() in {
+    '1', 'true', 'yes'
+}
+CSRF_COOKIE_SECURE = os.environ.get('DJANGO_CSRF_COOKIE_SECURE', 'false').lower() in {
+    '1', 'true', 'yes'
+}
 
 # Application definition
 
@@ -66,6 +88,7 @@ MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
     'django.middleware.common.CommonMiddleware',
+    'Vocab_Buddy.middleware.NoCacheHtmlMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'Vocab_Buddy.middleware.LoginRequiredMiddleware',
@@ -149,3 +172,8 @@ LOGIN_URL = 'authentication:login'
 LOGIN_REDIRECT_URL = 'home'
 LOGOUT_REDIRECT_URL = 'authentication:login'
 STATIC_ROOT = BASE_DIR / 'staticfiles'
+
+CSRF_TRUSTED_ORIGINS = [
+    "https://vocab-buddy.armin2080.de",
+    "http://vocab-buddy.armin2080.de",
+]

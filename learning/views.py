@@ -2,6 +2,7 @@ from django.shortcuts import render, redirect
 from django.contrib.auth.decorators import login_required
 from django.urls import reverse
 from django.utils import timezone
+from django.views.decorators.cache import never_cache
 from datetime import timedelta
 from Vocab_Buddy.streaks import get_user_streak_days
 from words.models import UserWord, Word
@@ -15,6 +16,7 @@ def index(request):
     return render(request, 'learning/index.html')
 
 
+@never_cache
 def home(request):
     """Render the dashboard-style home page using user's vocabulary stats."""
     context = {}
@@ -147,12 +149,35 @@ def review_start(request):
     level_map = {'A1': 0, 'A2': 1, 'B1': 2, 'B2': 3, 'C1': 4, 'C2': 5}
     cards = []
 
+    def weighted_sample(items, weights, count):
+        selected = []
+        pool_items = list(items)
+        pool_weights = list(weights)
+        for _ in range(min(count, len(pool_items))):
+            total = sum(pool_weights)
+            if total <= 0:
+                selected.extend(pool_items)
+                break
+            pick = random.uniform(0, total)
+            running = 0
+            chosen_index = 0
+            for idx, weight in enumerate(pool_weights):
+                running += weight
+                if running >= pick:
+                    chosen_index = idx
+                    break
+            selected.append(pool_items.pop(chosen_index))
+            pool_weights.pop(chosen_index)
+        return selected
+
+
     for uw in uwords_qs:
         review_count = uw.review_count or 0
         correct_count = uw.correct_count or 0
         incorrect = max(0, review_count - correct_count)
         level_weight = level_map.get(uw.word.cefr_level, 0)
-        weight = 1 + incorrect * 3 + level_weight
+        new_word_boost = 5 if review_count == 0 else 0
+        weight = 1 + incorrect * 3 + level_weight + new_word_boost
 
         examples = _parse_examples(uw.word.example_sentences or '')
         verb_forms_raw = uw.word.verb_forms or ''
@@ -171,6 +196,10 @@ def review_start(request):
         })
 
     import json
+    if len(cards) > 10:
+        weights = [card['weight'] for card in cards]
+        cards = weighted_sample(cards, weights, 10)
+    cards.sort(key=lambda card: card['weight'], reverse=True)
     cards_json_str = json.dumps(cards, ensure_ascii=False)
 
     context = {
@@ -188,11 +217,14 @@ def review_next(request):
         # Accept reviewed pks from the client (comma-separated) and mark them reviewed
         pks_csv = request.POST.get('reviewed_pks', '')
         pks = [int(x) for x in pks_csv.split(',') if x.strip().isdigit()]
+        incorrect_csv = request.POST.get('incorrect_pks', '')
+        incorrect_pks = {int(x) for x in incorrect_csv.split(',') if x.strip().isdigit()}
         for pk in pks:
             try:
                 uword = UserWord.objects.get(pk=pk, user=request.user)
                 uword.review_count = (uword.review_count or 0) + 1
-                uword.correct_count = (uword.correct_count or 0) + 1
+                if pk not in incorrect_pks:
+                    uword.correct_count = (uword.correct_count or 0) + 1
                 uword.last_reviewed = timezone.now()
                 uword.save()
             except UserWord.DoesNotExist:

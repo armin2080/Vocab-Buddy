@@ -157,12 +157,28 @@
     {% endblock %}
 
     {% block extra_js %}{% endblock %}
-    <script src="{% static 'js/ui.js' %}?v=3"></script>
+    <script src="{% static 'js/ui.js' %}?v=8"></script>
     <script src="{% static 'js/verb-panel.js' %}?v=1"></script>
         <script>
             if ('serviceWorker' in navigator) {
+                const cachePurgeKey = 'pwa-cache-purged-v5';
+                if (!localStorage.getItem(cachePurgeKey) && 'caches' in window) {
+                    caches.keys().then((keys) => Promise.all(keys.map((key) => caches.delete(key)))).finally(() => {
+                        localStorage.setItem(cachePurgeKey, '1');
+                        window.location.reload();
+                    });
+                }
+
+                let reloading = false;
+                navigator.serviceWorker.addEventListener('controllerchange', () => {
+                    if (reloading) return;
+                    reloading = true;
+                    window.location.reload();
+                });
                 window.addEventListener('load', () => {
-                    navigator.serviceWorker.register('{% url "service_worker" %}');
+                    navigator.serviceWorker
+                        .register('{% url "service_worker" %}?v=8', { updateViaCache: 'none' })
+                        .then((registration) => registration.update());
                 });
             }
         </script>
