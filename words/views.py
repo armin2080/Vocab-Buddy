@@ -62,23 +62,30 @@ def add_word(request):
         form = AddWordForm(request.POST)
         if form.is_valid():
             # Get parsed word data from form
+            input_text = form.cleaned_data['word']
             word_text = form.cleaned_data['parsed_word']
             translation = form.cleaned_data['parsed_translation']
             cefr_level = form.cleaned_data['parsed_cefr_level']
+            word_defaults = {
+                'translation': translation,
+                'cefr_level': cefr_level,
+                'example_sentences': form.cleaned_data.get('parsed_example_sentences', ''),
+                'verb_forms': form.cleaned_data.get('parsed_verb_forms', ''),
+                'is_verb': form.cleaned_data.get('parsed_is_verb', False),
+            }
             
-            # Create or get the Word
-            word, created = Word.objects.get_or_create(
-                word=word_text,
-                defaults={
-                    'translation': translation,
-                    'cefr_level': cefr_level,
-                    'example_sentences': form.cleaned_data.get('parsed_example_sentences', ''),
-                    'verb_forms': form.cleaned_data.get('parsed_verb_forms', ''),
-                    'is_verb': form.cleaned_data.get('parsed_is_verb', False),
-                }
-            )
+            word = Word.objects.filter(word__iexact=word_text).first()
+            if not word:
+                word = Word.objects.filter(word__iexact=input_text).first()
+                if word:
+                    word.word = word_text
+                    for field, value in word_defaults.items():
+                        setattr(word, field, value)
+                    word.save(update_fields=['word', *word_defaults.keys()])
+                else:
+                    word = Word.objects.create(word=word_text, **word_defaults)
 
-            if not created:
+            else:
                 updates = []
                 if not word.example_sentences:
                     word.example_sentences = form.cleaned_data.get('parsed_example_sentences', '')

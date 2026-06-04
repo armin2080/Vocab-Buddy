@@ -25,17 +25,17 @@ class GroqAIService:
 CRITICAL RULES:
 1. FIRST: Check if the input is actually a German word or phrase
 2. If the input is NOT German (English, French, Spanish, gibberish, etc.), respond with EXACTLY: "not german"
-3. If it IS German, return the word in its EXACT original form along with translation and CEFR level
-4. For German words: Return the word in its EXACT original form - do NOT change it from adjective to noun, verb to noun, etc.
-5. If it's a noun, include the article (der/die/das)
-6. If it's a verb, return it in infinitive form as given
-7. If it's an adjective, return it exactly as the adjective (do NOT convert to noun form)
-8. If it's an adverb, return it exactly as the adverb
-9. Provide accurate English translation for the word type given
+3. If it IS German, normalize it to the correct vocabulary storage form along with translation and CEFR level
+4. For German nouns: WORD must include the nominative article and noun, e.g. "der Tisch", "die Zeitung", "das Haus". If the user typed only "Haus", return "das Haus". If the user typed a plural noun, use "die" with the plural form.
+5. For German verbs: WORD must be the infinitive/lemma, even if the user typed a conjugated, past tense, or participle form. If the user typed "ging", "gegangen", or "geht", return "gehen".
+6. For adjectives: return the base adjective form (do NOT convert to noun form)
+7. For adverbs and phrases: return the natural dictionary/storage form
+8. Do NOT change the part of speech. Do not turn verbs into nouns, nouns into verbs, etc.
+9. Provide accurate English translation for the normalized word type
 10. Assign correct CEFR level (A1, A2, B1, B2, C1, C2)
 
 FORMAT for German words:
-WORD: <exact word as given>
+WORD: <normalized vocabulary form>
 TRANSLATION: <English translation>
 CEFR: <A1/A2/B1/B2/C1/C2>
 EXAMPLES:
@@ -126,6 +126,8 @@ CRITICAL RULES:
 1. FIRST: Check if the input is actually a German VERB
 2. If the input is NOT a German verb (noun, adjective, English word, etc.), respond with EXACTLY: "not a verb"
 3. If it IS a German verb, provide comprehensive conjugation information
+4. The input may be infinitive, conjugated present, Präteritum, or past participle. Always identify the infinitive/lemma and use that in VERB.
+5. Examples: "ging", "gegangen", and "geht" are verb forms of "gehen", so VERB must be "gehen".
 
 FORMAT for non-verbs: not a verb
 FORMAT for German verbs:

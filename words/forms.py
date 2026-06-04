@@ -1,6 +1,5 @@
 from django import forms
 from django.core.exceptions import ValidationError
-from .models import Word, UserWord
 from ai_service import GroqAIService
 
 
@@ -63,15 +62,27 @@ class AddWordForm(forms.Form):
 
             verb_forms_text = '\n'.join([line for line in verb_forms_lines if line]).strip()
             parsed_verb_forms = '' if verb_forms_text.lower() == 'not a verb' else verb_forms_text
+            verb_lemma, verb_meaning = extract_verb_metadata(parsed_verb_forms)
 
             return {
-                'parsed_word': word,
-                'parsed_translation': translation,
+                'parsed_word': verb_lemma or word,
+                'parsed_translation': verb_meaning or translation,
                 'parsed_cefr_level': cefr_level,
                 'parsed_example_sentences': '\n'.join([line for line in examples if line][:2]),
                 'parsed_verb_forms': parsed_verb_forms,
                 'parsed_is_verb': bool(parsed_verb_forms),
             }
+
+        def extract_verb_metadata(verb_forms_text):
+            verb = ''
+            meaning = ''
+            for raw_line in (verb_forms_text or '').splitlines():
+                line = raw_line.strip()
+                if line.startswith('VERB:'):
+                    verb = line.split(':', 1)[1].strip()
+                elif line.startswith('MEANING:'):
+                    meaning = line.split(':', 1)[1].strip()
+            return verb, meaning
 
         def parse_verb_response(ai_response):
             lines = [line.rstrip() for line in ai_response.splitlines()]
@@ -106,10 +117,6 @@ class AddWordForm(forms.Form):
         if not word_input:
             raise ValidationError('Please enter a German word.')
         
-        # Check if word already exists
-        if Word.objects.filter(word__iexact=word_input).exists():
-            raise ValidationError('This word already exists in the database.')
-        
         # Validate with Groq AI
         try:
             ai_service = GroqAIService()
@@ -128,6 +135,11 @@ class AddWordForm(forms.Form):
                     verb_info_response = ai_service.get_verb_info(word_input)
                     parsed_verb_forms = parse_verb_response(verb_info_response)
                     if parsed_verb_forms:
+                        verb_lemma, verb_meaning = extract_verb_metadata(parsed_verb_forms)
+                        if verb_lemma:
+                            self.cleaned_data['parsed_word'] = verb_lemma
+                        if verb_meaning:
+                            self.cleaned_data['parsed_translation'] = verb_meaning
                         self.cleaned_data['parsed_verb_forms'] = parsed_verb_forms
                         self.cleaned_data['parsed_is_verb'] = True
 
