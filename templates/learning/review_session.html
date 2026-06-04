@@ -18,7 +18,7 @@
   <!-- Flashcard Display -->
   <div id="card-container" class="relative w-full h-96 perspective-1000 mb-6">
     <div id="card-flip-zone" class="absolute inset-0" style="cursor:pointer">
-      <div id="card-level-badge" class="absolute top-4 left-4 bg-secondary text-foreground px-3 py-1 rounded-full text-sm font-medium">{% if cards and cards.0.level %}{{ cards.0.level }}{% else %}LEVEL{% endif %}</div>
+      <div id="card-level-badge" class="absolute top-4 left-4 z-20 rounded-md bg-primary px-3 py-1 text-sm font-semibold text-white shadow-sm">{% if cards and cards.0.level %}{{ cards.0.level }}{% else %}LEVEL{% endif %}</div>
       <div id="card-inner" class="absolute inset-0 rounded-2xl" style="transform-style:preserve-3d;">
         <div id="card-front" class="flashcard-face absolute inset-0 bg-card rounded-2xl border-2 border-primary shadow-lg flex items-center justify-center backface-hidden" style="transform:rotateY(0deg); -webkit-backface-visibility:hidden; backface-visibility:hidden;">{% if cards and cards.0.front %}{{ cards.0.front }}{% endif %}</div>
         <div id="card-back" class="flashcard-face absolute inset-0 rounded-2xl border-2 border-primary shadow-lg flex items-center justify-center backface-hidden" style="transform:rotateY(180deg); -webkit-backface-visibility:hidden; backface-visibility:hidden; color:white; background: linear-gradient(135deg, var(--primary, #3b82f6), rgba(59, 130, 246, 0.5));">{% if cards and cards.0.back %}{{ cards.0.back }}{% endif %}</div>
@@ -26,15 +26,18 @@
     </div>
   </div>
 
-  <div class="flex items-center justify-center gap-2 sm:gap-4 mb-6">
-    <button id="card-incorrect" type="button" class="flex items-center gap-2 px-5 sm:px-6 py-3 bg-destructive text-white rounded-lg hover:bg-destructive/90">Incorrect</button>
-    <button id="card-correct" type="button" class="flex items-center gap-2 px-5 sm:px-6 py-3 bg-success text-white rounded-lg hover:bg-success/90">Correct</button>
+  <div class="review-controls flex items-center justify-center gap-2 sm:gap-4 mb-6">
+    <button id="card-incorrect" type="button" class="flex flex-1 items-center justify-center gap-2 px-5 sm:px-6 py-3 bg-destructive text-white rounded-lg hover:bg-destructive/90 sm:flex-none">Incorrect</button>
+    <button id="card-correct" type="button" class="flex flex-1 items-center justify-center gap-2 px-5 sm:px-6 py-3 bg-success text-white rounded-lg hover:bg-success/90 sm:flex-none">Correct</button>
   </div>
 
   <!-- Examples & Paragraph -->
   <div class="space-y-3 sm:space-y-4">
-    <div class="bg-green-50 border border-green-200 rounded-lg p-3 sm:p-4">
-      <h3 class="font-semibold text-green-900 mb-3">💡 Example Sentences</h3>
+    <details class="review-panel bg-green-50 border border-green-200 rounded-lg p-3 sm:p-4" open>
+      <summary class="flex items-center justify-between gap-3">
+        <h3 class="font-semibold text-green-900">Example Sentences</h3>
+        <span class="text-green-900" style="font-size:13px;">Show</span>
+      </summary>
       <ul id="card-examples" class="space-y-2 text-sm text-foreground">
         {% if cards and cards.0.examples %}
           {% for example in cards.0.examples %}
@@ -42,11 +45,14 @@
           {% endfor %}
         {% endif %}
       </ul>
-    </div>
+    </details>
 
-    <div id="verb-section" class="bg-purple-50 border border-purple-200 rounded-lg p-3 sm:p-4" style="{% if not cards or not cards.0.is_verb %}display:none;{% endif %}">
-      <h3 class="font-semibold text-purple-900 mb-3">🧩 Verb Forms</h3>
-      <div class="overflow-x-auto space-y-4">
+    <details id="verb-section" class="review-panel bg-purple-50 border border-purple-200 rounded-lg p-3 sm:p-4" style="{% if not cards or not cards.0.is_verb %}display:none;{% endif %}" open>
+      <summary class="flex items-center justify-between gap-3">
+        <h3 class="font-semibold text-purple-900">Verb Forms</h3>
+        <span class="text-purple-900" style="font-size:13px;">Show</span>
+      </summary>
+      <div class="mt-3 overflow-x-auto space-y-4">
         <table class="w-full text-sm border border-purple-200 rounded-lg overflow-hidden">
           <tbody id="verb-summary-body"></tbody>
         </table>
@@ -81,7 +87,7 @@
           </table>
         </div>
       </div>
-    </div>
+    </details>
   </div>
 
   <!-- Complete Button -->

@@ -219,7 +219,76 @@
   overflow-wrap: anywhere;
 }
 
+.mobile-bottom-nav {
+  position: fixed;
+  right: 0;
+  bottom: 0;
+  left: 0;
+  z-index: 60;
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 0.25rem;
+  border-top: 1px solid var(--border);
+  background: rgba(255, 255, 255, 0.96);
+  padding: 0.45rem 0.55rem calc(0.45rem + env(safe-area-inset-bottom));
+  box-shadow: 0 -8px 24px rgba(31, 41, 55, 0.08);
+  backdrop-filter: blur(12px);
+}
+
+.mobile-bottom-link {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 0.15rem;
+  border-radius: 0.65rem;
+  color: var(--muted-foreground);
+  font-size: 0.72rem;
+  line-height: 1.1;
+  padding: 0.35rem 0.25rem;
+  text-decoration: none;
+}
+
+.mobile-bottom-link.is-active {
+  background: var(--primary);
+  color: var(--primary-foreground);
+}
+
+.mobile-bottom-icon {
+  font-size: 1rem;
+  font-weight: 700;
+  line-height: 1;
+}
+
+.review-controls {
+  position: sticky;
+  bottom: 4.75rem;
+  z-index: 20;
+  border-radius: 0.9rem;
+  background: rgba(250, 250, 249, 0.92);
+  padding: 0.5rem;
+  backdrop-filter: blur(10px);
+}
+
+details.review-panel > summary {
+  cursor: pointer;
+  list-style: none;
+}
+
+details.review-panel > summary::-webkit-details-marker {
+  display: none;
+}
+
 @media (max-width: 640px) {
+  .app-shell {
+    padding-bottom: 5.25rem;
+  }
+
+  footer {
+    display: none;
+  }
+
   .flashcard-review h2 {
     margin-bottom: 0.75rem;
     font-size: 1.35rem;

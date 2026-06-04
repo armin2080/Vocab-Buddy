@@ -6,7 +6,7 @@
 [![PWA](https://img.shields.io/badge/PWA-Ready-blueviolet.svg)](#pwa-support)
 [![License](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 
-A modern Django web application designed to help users learn German vocabulary through spaced repetition, interactive flashcard review, AI-powered language validation, personalized quizzes, and a responsive mobile-first interface with PWA support.
+A modern Django web application designed to help users learn German vocabulary through spaced repetition, interactive flashcard review, AI-powered language validation, and a responsive mobile-first interface with PWA support.
 
 ## 📋 Table of Contents
 
@@ -34,7 +34,6 @@ A modern Django web application designed to help users learn German vocabulary t
 - **Verb Conjugations**: Automatic parsing and storage of all verb forms (present, past, perfect)
 - **Interactive Flashcards**: Flip-based card system with examples and verb conjugations
 - **Spaced Repetition Algorithm**: Intelligent word selection based on mastery level and review frequency
-- **Multiple-Choice Quizzes**: Test knowledge with randomized questions and instant feedback
 
 ### 📊 Dashboard & Analytics
 - **Weekly Progress Chart**: Visual bar chart showing words added each day over the past week
@@ -185,12 +184,11 @@ Edit `Vocab_Buddy/settings.py` to customize:
 1. **Create Account**: Register with username and password
 2. **Add Words**: Click "Add Word" and enter German words
 3. **Review Vocabulary**: Use "Flash Cards" to review words with spaced repetition
-4. **Take Quizzes**: Test knowledge with "Quiz" mode
-5. **Track Progress**: View your "Home" dashboard for weekly progress and streak
+4. **Track Progress**: View your "Home" dashboard for weekly progress and streak
 
 ### Typical Learning Workflow
 ```
-Register → Add German Words → Review with Flashcards → Take Quizzes → Track Progress
+Register → Add German Words → Review with Flashcards → Track Progress
 ```
 
 ### Key Pages
@@ -199,7 +197,6 @@ Register → Add German Words → Review with Flashcards → Take Quizzes → Tr
 |------|-------------|
 | **Home** | Dashboard with weekly progress chart, study streak, and learning stats |
 | **Flash Cards** | Interactive spaced repetition review session with examples and verb forms |
-| **Quiz** | Multiple-choice questions from your vocabulary (4+ words required) |
 | **Vocabulary** | Browse, search, and manage your word collection |
 | **Add Word** | Add new German words (AI extracts translation, CEFR level, examples, verb forms) |
 
@@ -226,10 +223,10 @@ Vocab-Buddy/
 │   ├── views.py              # Add/list/delete word views
 │   ├── forms.py              # Word input validation and AI parsing
 │   └── urls.py
-├── learning/                 # Flashcards, quizzes, dashboard
-│   ├── models.py             # ReviewSession and QuizResult models
-│   ├── views.py              # Flashcard, quiz, and dashboard views
-│   ├── forms.py              # Review and quiz forms
+├── learning/                 # Flashcards and dashboard
+│   ├── models.py             # ReviewSession model
+│   ├── views.py              # Flashcard and dashboard views
+│   ├── forms.py              # Review forms
 │   ├── scheduler.py          # Spaced repetition algorithm
 │   └── urls.py
 ├── templates/                # Server-rendered HTML templates
@@ -237,7 +234,7 @@ Vocab-Buddy/
 │   ├── home.html             # Dashboard with weekly chart and stats
 │   ├── authentication/       # Login and registration
 │   ├── words/                # Word list, add word forms
-│   └── learning/             # Flashcard and quiz templates
+│   └── learning/             # Flashcard templates
 ├── static/                   # CSS, JavaScript, icons
 │   ├── css/
 │   │   ├── fonts.css         # Font definitions
@@ -269,7 +266,7 @@ Vocab-Buddy/
 
 ### Frontend
 - **Tailwind CSS**: Utility-first CSS framework
-- **Vanilla JavaScript**: Interactive UI (flashcards, quizzes)
+- **Vanilla JavaScript**: Interactive UI for flashcards
 - **Server-Rendered Templates**: Django template language for HTML generation
 - **Responsive Design**: Mobile-first approach with flexbox and media queries
 

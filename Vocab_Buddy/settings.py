@@ -46,11 +46,16 @@ SECRET_KEY = 'django-insecure--dm-x=9-^!nip&cu69==(ov#wj2vm#a!!=*#w+!$r4!_+d-8rf
 DEBUG = os.environ.get('DJANGO_DEBUG', 'true').lower() in {'1', 'true', 'yes'}
 
 
-def parse_csv_env(name):
-    return [value.strip() for value in os.environ.get(name, '').split(',') if value.strip()]
+def parse_csv_env(*names):
+    for name in names:
+        raw_value = os.environ.get(name, '')
+        values = [value.strip() for value in raw_value.split(',') if value.strip()]
+        if values:
+            return values
+    return []
 
 
-ALLOWED_HOSTS = parse_csv_env('DJANGO_ALLOWED_HOSTS')
+ALLOWED_HOSTS = parse_csv_env('DJANGO_ALLOWED_HOSTS', 'ALLOWED_HOSTS')
 if DEBUG and not ALLOWED_HOSTS:
     ALLOWED_HOSTS = ['localhost', '127.0.0.1']
 
@@ -172,8 +177,3 @@ LOGIN_URL = 'authentication:login'
 LOGIN_REDIRECT_URL = 'home'
 LOGOUT_REDIRECT_URL = 'authentication:login'
 STATIC_ROOT = BASE_DIR / 'staticfiles'
-
-CSRF_TRUSTED_ORIGINS = [
-    "https://vocab-buddy.armin2080.de",
-    "http://vocab-buddy.armin2080.de",
-]

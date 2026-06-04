@@ -5,10 +5,7 @@ from django.utils import timezone
 from django.views.decorators.cache import never_cache
 from datetime import timedelta
 from Vocab_Buddy.streaks import get_user_streak_days
-from words.models import UserWord, Word
-from .forms import ReviewForm, QuizAnswerForm
-from .models import QuizResult, ReviewSession
-from .scheduler import SpacedRepetitionScheduler
+from words.models import UserWord
 import random
 
 
@@ -42,6 +39,32 @@ def home(request):
             {'label': 'Study Streak', 'value': f'🔥 {streak_days} day streak' if streak_days else '🔥 Start your streak', 'color': 'bg-accent'},
             {'label': 'Review Due', 'value': review_due, 'color': 'bg-chart-4'},
         ]
+        compact_stats = [
+            {'label': 'Words', 'value': total_words},
+            {'label': 'Mastered', 'value': mastered_words},
+            {'label': 'Streak', 'value': streak_days},
+            {'label': 'Due', 'value': review_due},
+        ]
+        today_plan = [
+            {
+                'label': 'Review flashcards',
+                'detail': f'{review_due} words waiting' if review_due else 'Keep your memory fresh',
+                'href': reverse('learning:review_start'),
+                'done': total_words > 0 and review_due == 0,
+            },
+            {
+                'label': 'Add vocabulary',
+                'detail': 'Save one useful German word',
+                'href': reverse('words:add_word'),
+                'done': False,
+            },
+            {
+                'label': 'Browse words',
+                'detail': f'{total_words} saved words',
+                'href': reverse('words:word_list'),
+                'done': total_words > 0,
+            },
+        ]
         today = timezone.localdate()
         start_day = today - timedelta(days=6)
         counts_by_day = {start_day + timedelta(days=offset): 0 for offset in range(7)}
@@ -70,7 +93,13 @@ def home(request):
         weekly_total = sum(point['words'] for point in weekly_data)
 
         context.update({
+            'total_words': total_words,
+            'mastered_words': mastered_words,
+            'review_due': review_due,
+            'streak_days': streak_days,
             'stats': stats,
+            'compact_stats': compact_stats,
+            'today_plan': today_plan,
             'weekly_data': weekly_data,
             'weekly_total': weekly_total,
             'weekly_start_label': start_day.strftime('%b %d'),
@@ -232,108 +261,6 @@ def review_next(request):
         return render(request, 'learning/review_done.html')
     
     return redirect('learning:review_start')
-
-
-@login_required
-def quiz_start(request):
-    """Start quiz: select 5 words and generate multiple-choice questions"""
-    # Get up to 5 random words from user's vocabulary
-    user_words = list(UserWord.objects.filter(user=request.user).values_list('word__word', 'word__translation', 'pk'))
-    if len(user_words) < 4:
-        return render(request, 'learning/quiz_insufficient.html', {'needed': 4, 'have': len(user_words)})
-    
-    quiz_words = random.sample(user_words, min(5, len(user_words)))
-    questions = []
-    
-    # Generate multiple-choice questions
-    for word_text, translation, word_pk in quiz_words:
-        # Get 3 wrong answers from other words
-        other_translations = [w[1] for w in user_words if w[0] != word_text]
-        wrong_answers = random.sample(other_translations, min(3, len(other_translations)))
-        
-        # Create options list
-        options = [translation] + wrong_answers[:3]
-        random.shuffle(options)
-        correct_idx = options.index(translation)
-        
-        questions.append({
-            'word': word_text,
-            'translation': translation,
-            'options': options,
-            'correct': correct_idx
-        })
-    
-    request.session['quiz_questions'] = questions
-    request.session['quiz_answers'] = []
-    request.session['quiz_score'] = 0
-    return redirect('learning:quiz_question', qid=0)
-
-
-@login_required
-def quiz_question(request, qid):
-    """Show quiz question with multiple-choice options"""
-    questions = request.session.get('quiz_questions', [])
-    if qid >= len(questions):
-        return redirect('learning:quiz_results')
-
-    question = questions[qid]
-    
-    if request.method == 'POST':
-        selected_idx = int(request.POST.get('answer', -1))
-        is_correct = selected_idx == question['correct']
-        
-        quiz_answers = request.session.get('quiz_answers', [])
-        quiz_answers.append({
-            'question': question['word'],
-            'correct_answer': question['translation'],
-            'user_answer': question['options'][selected_idx] if 0 <= selected_idx < len(question['options']) else 'Invalid',
-            'is_correct': is_correct
-        })
-        request.session['quiz_answers'] = quiz_answers
-        
-        if is_correct:
-            request.session['quiz_score'] = request.session.get('quiz_score', 0) + 1
-        
-        return redirect('learning:quiz_question', qid=qid+1)
-    
-    # Display multiple-choice question
-    progress_percent = int((qid / len(questions)) * 100) if len(questions) > 0 else 0
-    option_letters = ['A', 'B', 'C', 'D']
-    options_with_labels = list(zip(option_letters, question['options']))
-    context = {
-        'question_num': qid + 1,
-        'total_questions': len(questions),
-        'word': question['word'],
-        'options': question['options'],
-        'options_with_labels': options_with_labels,
-
-        'qid': qid,
-        'progress_percent': progress_percent,
-    }
-    return render(request, 'learning/quiz_question.html', context)
-
-
-@login_required
-def quiz_results(request):
-    """Display quiz results"""
-    answers = request.session.get('quiz_answers', [])
-    total = len(answers)
-    correct = sum(1 for a in answers if a.get('is_correct'))
-
-    if request.user.is_authenticated and total > 0:
-        QuizResult.objects.create(user=request.user, total=total, correct=correct)
-        for ans in answers:
-            try:
-                uw = UserWord.objects.get(user=request.user, word__word=ans.get('question'))
-                uw.review_count = (uw.review_count or 0) + 1
-                if ans.get('is_correct'):
-                    uw.correct_count = (uw.correct_count or 0) + 1
-                uw.last_reviewed = timezone.now()
-                uw.save()
-            except UserWord.DoesNotExist:
-                continue
-
-    return render(request, 'learning/quiz_results.html', {'answers': answers, 'total': total, 'correct': correct})
 
 
 @login_required

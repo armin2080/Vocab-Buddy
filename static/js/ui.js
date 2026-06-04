@@ -303,22 +303,6 @@ document.addEventListener('DOMContentLoaded', function () {
     if (focusBtn) focusBtn.addEventListener('click', () => searchInput.focus());
   }
 
-  // Quiz form enable/selection handling
-  const quizForm = document.getElementById('quiz-form');
-  if (quizForm) {
-    const submitBtn = document.getElementById('quiz-submit');
-    const radios = Array.from(quizForm.querySelectorAll('.option-radio'));
-    const labels = Array.from(quizForm.querySelectorAll('.option-label'));
-
-    radios.forEach((r, idx) => {
-      r.addEventListener('change', () => {
-        if (submitBtn) submitBtn.disabled = false;
-        labels.forEach((lab, i) => {
-          lab.classList.toggle('ring-ring', i === idx);
-        });
-      });
-    });
-  }
 });
 
 /* Small CSS helper appended via JS is avoided; styles live in theme.css */
