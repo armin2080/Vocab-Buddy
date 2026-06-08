@@ -6,7 +6,7 @@
 [![PWA](https://img.shields.io/badge/PWA-Ready-blueviolet.svg)](#pwa-support)
 [![License](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 
-A modern Django web application designed to help users learn German vocabulary through spaced repetition, interactive flashcard review, AI-powered language validation, and a responsive mobile-first interface with PWA support.
+A modern Django web application designed to help users learn German vocabulary through spaced repetition, interactive flashcard review, AI-guided writing practice, and a responsive mobile-first interface with PWA support.
 
 ## 📋 Table of Contents
 
@@ -32,14 +32,18 @@ A modern Django web application designed to help users learn German vocabulary t
 - **Automatic CEFR Classification**: Words categorized by proficiency level (A1–C2)
 - **Example Sentences**: AI-generated contextual examples for each word
 - **Verb Conjugations**: Automatic parsing and storage of all verb forms (present, past, perfect)
+- **Noun Forms**: Automatic singular, plural, masculine, and feminine forms when available
 - **Interactive Flashcards**: Flip-based card system with examples and verb conjugations
 - **Spaced Repetition Algorithm**: Intelligent word selection based on mastery level and review frequency
+- **Practice Lab**: AI-guided paragraph challenges using five prioritized vocabulary words
+- **Conversational Feedback**: Continue asking questions or revising a paragraph while the active session remembers earlier messages
 
 ### 📊 Dashboard & Analytics
 - **Weekly Progress Chart**: Visual bar chart showing words added each day over the past week
 - **Study Streak**: Track consecutive days of vocabulary practice
 - **Learning Statistics**: Total words, mastered words, and words due for review
 - **Personal Vocabulary List**: Browse, search, and manage your word collection
+- **Detailed Word Pages**: View, edit, refresh through AI, or remove saved vocabulary
 
 ### 📱 User Interface
 - **Responsive Design**: Mobile-first layout that works on all devices
@@ -56,9 +60,10 @@ A modern Django web application designed to help users learn German vocabulary t
 ### 🤖 AI Integration
 - **Groq LLM**: Fast, cost-effective AI via Groq's language models
 - **Language Detection**: Validates German vs. non-German input
-- **Structured Parsing**: Extracts word metadata (translation, CEFR level, examples, verb forms)
+- **Structured Parsing**: Extracts word metadata including translation, CEFR level, examples, noun forms, and verb forms
 - **Fallback Verb Detection**: Automatic retry with enhanced prompts for verb forms
 - **Persistence**: AI-generated data stored at creation time for reliable rendering
+- **Temporary Practice Memory**: Groq receives the complete active Practice Lab conversation; closing the session deletes its chat history
 
 ### 🔐 Authentication & Personalization
 - **User Accounts**: Secure registration and login system
@@ -184,11 +189,12 @@ Edit `Vocab_Buddy/settings.py` to customize:
 1. **Create Account**: Register with username and password
 2. **Add Words**: Click "Add Word" and enter German words
 3. **Review Vocabulary**: Use "Flash Cards" to review words with spaced repetition
-4. **Track Progress**: View your "Home" dashboard for weekly progress and streak
+4. **Practice Writing**: Open "Practice Lab" and write a paragraph using five selected words
+5. **Track Progress**: View your "Home" dashboard for weekly progress and streak
 
 ### Typical Learning Workflow
 ```
-Register → Add German Words → Review with Flashcards → Track Progress
+Register → Add German Words → Review with Flashcards → Practice Writing → Track Progress
 ```
 
 ### Key Pages
@@ -197,8 +203,9 @@ Register → Add German Words → Review with Flashcards → Track Progress
 |------|-------------|
 | **Home** | Dashboard with weekly progress chart, study streak, and learning stats |
 | **Flash Cards** | Interactive spaced repetition review session with examples and verb forms |
-| **Vocabulary** | Browse, search, and manage your word collection |
-| **Add Word** | Add new German words (AI extracts translation, CEFR level, examples, verb forms) |
+| **Practice Lab** | Complete an AI-guided paragraph challenge with conversational feedback |
+| **Vocabulary** | Browse selectable word cards and manage detailed word information |
+| **Add Word** | Add new German words with AI-extracted translation, CEFR level, examples, noun forms, and verb forms |
 
 ---
 
@@ -220,7 +227,7 @@ Vocab-Buddy/
 │   └── urls.py
 ├── words/                    # Vocabulary management
 │   ├── models.py             # Word and UserWord models
-│   ├── views.py              # Add/list/delete word views
+│   ├── views.py              # Add/list/detail/edit/refresh/delete word views
 │   ├── forms.py              # Word input validation and AI parsing
 │   └── urls.py
 ├── learning/                 # Flashcards and dashboard
@@ -229,12 +236,19 @@ Vocab-Buddy/
 │   ├── forms.py              # Review forms
 │   ├── scheduler.py          # Spaced repetition algorithm
 │   └── urls.py
+├── practice_lab/             # AI-guided writing practice
+│   ├── models.py             # Temporary practice sessions and chat messages
+│   ├── services.py           # Challenge selection and coach prompts
+│   ├── views.py              # Session, conversation, and close-session views
+│   ├── templatetags/         # Safe formatted feedback rendering
+│   └── urls.py
 ├── templates/                # Server-rendered HTML templates
 │   ├── base.html             # Base layout with header and navigation
 │   ├── home.html             # Dashboard with weekly chart and stats
 │   ├── authentication/       # Login and registration
 │   ├── words/                # Word list, add word forms
-│   └── learning/             # Flashcard templates
+│   ├── learning/             # Flashcard templates
+│   └── practice_lab/         # Practice challenge and chat templates
 ├── static/                   # CSS, JavaScript, icons
 │   ├── css/
 │   │   ├── fonts.css         # Font definitions
@@ -262,7 +276,7 @@ Vocab-Buddy/
 - **Django 6.0.5**: Web framework with authentication, ORM, and admin
 - **Python 3.12**: Programming language
 - **SQLite**: Lightweight relational database
-- **Groq LLM**: AI for German language processing and word metadata
+- **Groq LLM**: AI for German language processing, word metadata, and conversational writing feedback
 
 ### Frontend
 - **Tailwind CSS**: Utility-first CSS framework
@@ -370,6 +384,11 @@ For issues, questions, or suggestions:
 **"Not enough words for review"**
 - Add at least 5 words using the "Add Word" feature
 - Wait a moment for AI processing to complete
+
+**"Practice Lab is not ready"**
+- Add at least 5 words to your vocabulary
+- Practice Lab selects five challenging words from your saved collection
+- Close the active session when finished to delete its conversation history
 
 **PWA not installing**
 - Ensure using HTTPS (production) or localhost (development)
