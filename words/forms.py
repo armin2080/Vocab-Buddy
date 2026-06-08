@@ -1,6 +1,44 @@
 from django import forms
 from django.core.exceptions import ValidationError
 from ai_service import GroqAIService
+from .models import Word
+
+
+class EditWordForm(forms.ModelForm):
+    """Edit stored vocabulary metadata."""
+
+    class Meta:
+        model = Word
+        fields = [
+            'word',
+            'translation',
+            'cefr_level',
+            'example_sentences',
+            'context_paragraph',
+            'is_noun',
+            'singular_form',
+            'plural_form',
+            'masculine_form',
+            'feminine_form',
+            'is_verb',
+            'verb_forms',
+        ]
+        widgets = {
+            'translation': forms.Textarea(attrs={'rows': 2}),
+            'example_sentences': forms.Textarea(attrs={'rows': 4}),
+            'context_paragraph': forms.Textarea(attrs={'rows': 5}),
+            'verb_forms': forms.Textarea(attrs={'rows': 12}),
+        }
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        for field in self.fields.values():
+            field.widget.attrs['class'] = (
+                'w-full rounded-md border border-gray-300 px-3 py-2 '
+                'focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500'
+            )
+        for name in ('is_noun', 'is_verb'):
+            self.fields[name].widget.attrs['class'] = 'h-4 w-4 rounded border-gray-300'
 
 
 class AddWordForm(forms.Form):
@@ -26,6 +64,7 @@ class AddWordForm(forms.Form):
             cefr_level = ''
             examples = []
             verb_forms_lines = []
+            noun_forms = {}
             section = None
 
             for raw_line in lines:
@@ -50,11 +89,17 @@ class AddWordForm(forms.Form):
                 if line.startswith('VERB_FORMS:'):
                     section = 'verb_forms'
                     continue
+                if line.startswith('NOUN_FORMS:'):
+                    section = 'noun_forms'
+                    continue
 
                 if section == 'examples':
                     examples.append(line.lstrip('0123456789. ').strip())
                 elif section == 'verb_forms':
                     verb_forms_lines.append(raw_line.rstrip())
+                elif section == 'noun_forms' and ':' in line:
+                    key, value = line.split(':', 1)
+                    noun_forms[key.strip().lower()] = value.strip()
 
             valid_levels = ['A1', 'A2', 'B1', 'B2', 'C1', 'C2']
             if not word or not translation or cefr_level not in valid_levels:
@@ -63,6 +108,11 @@ class AddWordForm(forms.Form):
             verb_forms_text = '\n'.join([line for line in verb_forms_lines if line]).strip()
             parsed_verb_forms = '' if verb_forms_text.lower() == 'not a verb' else verb_forms_text
             verb_lemma, verb_meaning = extract_verb_metadata(parsed_verb_forms)
+            clean_noun_form = lambda value: '' if value.lower() in {'', 'none', 'n/a', 'not applicable'} else value
+            singular_form = clean_noun_form(noun_forms.get('singular', ''))
+            plural_form = clean_noun_form(noun_forms.get('plural', ''))
+            masculine_form = clean_noun_form(noun_forms.get('masculine', ''))
+            feminine_form = clean_noun_form(noun_forms.get('feminine', ''))
 
             return {
                 'parsed_word': verb_lemma or word,
@@ -71,6 +121,11 @@ class AddWordForm(forms.Form):
                 'parsed_example_sentences': '\n'.join([line for line in examples if line][:2]),
                 'parsed_verb_forms': parsed_verb_forms,
                 'parsed_is_verb': bool(parsed_verb_forms),
+                'parsed_is_noun': bool(singular_form or plural_form),
+                'parsed_singular_form': singular_form,
+                'parsed_plural_form': plural_form,
+                'parsed_masculine_form': masculine_form,
+                'parsed_feminine_form': feminine_form,
             }
 
         def extract_verb_metadata(verb_forms_text):

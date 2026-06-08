@@ -44,7 +44,7 @@ def service_worker(request):
     assets_to_cache = [
         static('css/fonts.css'),
         static('css/theme.css'),
-        f"{static('js/ui.js')}?v=8",
+        f"{static('js/ui.js')}?v=9",
         f"{static('js/verb-panel.js')}?v=1",
         static('icons/icon-192.png'),
         static('icons/icon-512.png'),
@@ -52,7 +52,7 @@ def service_worker(request):
     ]
 
     script = f"""
-const CACHE_NAME = 'vocab-buddy-pwa-v7';
+const CACHE_NAME = 'vocab-buddy-pwa-v8';
 const ASSETS = {json.dumps(assets_to_cache)};
 
 self.addEventListener('install', (event) => {{

@@ -22,6 +22,11 @@ class Word(models.Model):
     context_paragraph = models.TextField(blank=True, default='')
     verb_forms = models.TextField(blank=True, default='')
     is_verb = models.BooleanField(default=False)
+    is_noun = models.BooleanField(default=False)
+    singular_form = models.CharField(max_length=255, blank=True, default='')
+    plural_form = models.CharField(max_length=255, blank=True, default='')
+    masculine_form = models.CharField(max_length=255, blank=True, default='')
+    feminine_form = models.CharField(max_length=255, blank=True, default='')
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
     

@@ -130,6 +130,35 @@ document.addEventListener('DOMContentLoaded', function () {
     pastBody.innerHTML = renderRows(data.past_rows || []);
   }
 
+  function renderNounForms(data) {
+    const nounSection = document.getElementById('noun-section');
+    const nounBody = document.getElementById('noun-forms-body');
+    if (!nounSection || !nounBody) return;
+
+    const rows = [
+      ['Singular', data?.singular],
+      ['Plural', data?.plural],
+      ['Masculine', data?.masculine],
+      ['Feminine', data?.feminine],
+    ].filter(([, value]) => value);
+
+    if (!rows.length) {
+      nounSection.classList.add('hidden');
+      nounSection.style.display = 'none';
+      nounBody.innerHTML = '';
+      return;
+    }
+
+    nounSection.classList.remove('hidden');
+    nounSection.style.display = '';
+    nounBody.innerHTML = rows.map(([label, value]) => `
+      <tr class="border-b border-amber-100 last:border-b-0">
+        <th class="px-3 py-2 text-left bg-white/70">${label}</th>
+        <td class="px-3 py-2 bg-white">${escapeHtml(value)}</td>
+      </tr>
+    `).join('');
+  }
+
   
   function updateReviewInputs() {
     const reviewedInput = document.getElementById('reviewed-pks-input');
@@ -160,6 +189,7 @@ document.addEventListener('DOMContentLoaded', function () {
       verbSection.classList.toggle('hidden', !currentCard.is_verb);
     }
     renderExamples(currentCard.examples || []);
+    renderNounForms(currentCard.is_noun ? currentCard.noun_forms_data : null);
     if (currentCard.is_verb && currentCard.verb_forms_data && currentCard.verb_forms_data.meta && summaryBody && presentBody && perfectBody && pastBody) {
       const data = currentCard.verb_forms_data;
       const meta = data.meta || {};

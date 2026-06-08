@@ -42,7 +42,7 @@ EXAMPLES:
 1. <German example sentence> - <English translation>
 2. <German example sentence> - <English translation>
 VERB_FORMS:
-If the word is not a verb, respond with exactly: not a verb
+If the word is not a verb, write exactly "not a verb" under this heading, then continue to NOUN_FORMS
 If the word is a verb, respond with:
 VERB: <infinitive form>
 MEANING: <English translation>
@@ -64,6 +64,13 @@ sie/Sie <form>
 PERFECT TENSE:
 Past Participle: <ge- form>
 Auxiliary: <haben/sein>
+NOUN_FORMS:
+If the word is not a noun, write exactly "not a noun" under this heading
+If the word is a noun, respond with:
+SINGULAR: <nominative singular with article, or none if no singular exists>
+PLURAL: <nominative plural with article, or none if no plural exists>
+MASCULINE: <masculine counterpart with article, or none if it does not exist>
+FEMININE: <feminine counterpart with article, or none if it does not exist>
 
 Here is the word/phrase to analyze:
 """

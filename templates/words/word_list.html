@@ -31,7 +31,7 @@
         <!-- Vocabulary Grid -->
         <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
             {% for user_word in user_words %}
-                <div class="bg-card rounded-xl p-5 border border-border hover:shadow-md transition-shadow">
+                <a href="{% url 'words:word_detail' user_word.pk %}" class="block bg-card rounded-xl p-5 border border-border hover:shadow-md hover:border-primary transition-all focus:outline-none focus:ring-2 focus:ring-primary">
                     <div class="flex items-start justify-between mb-3">
                         <div class="flex items-center gap-2">
                             <span class="text-primary capitalize" style="font-size:12px; font-weight:500;">{{ user_word.word.cefr_level }}</span>
@@ -45,8 +45,17 @@
                     <div class="mb-2">
                         <div class="text-foreground mb-1" style="font-size:18px; font-weight:600;">{{ user_word.word.word }}</div>
                         <div class="text-muted-foreground" style="font-size:16px;">{{ user_word.word.translation }}</div>
+                        {% if user_word.word.is_noun %}
+                            <div class="mt-3 text-muted-foreground space-y-1" style="font-size:13px;">
+                                {% if user_word.word.singular_form %}<div><span class="font-medium text-foreground">Singular:</span> {{ user_word.word.singular_form }}</div>{% endif %}
+                                {% if user_word.word.plural_form %}<div><span class="font-medium text-foreground">Plural:</span> {{ user_word.word.plural_form }}</div>{% endif %}
+                                {% if user_word.word.masculine_form %}<div><span class="font-medium text-foreground">Masculine:</span> {{ user_word.word.masculine_form }}</div>{% endif %}
+                                {% if user_word.word.feminine_form %}<div><span class="font-medium text-foreground">Feminine:</span> {{ user_word.word.feminine_form }}</div>{% endif %}
+                            </div>
+                        {% endif %}
                     </div>
-                </div>
+                    <div class="mt-4 text-primary font-medium" style="font-size:13px;">View details</div>
+                </a>
             {% empty %}
                 <div class="text-center py-12">
                     <div class="text-muted-foreground mb-2" style="font-size:48px;">📚</div>

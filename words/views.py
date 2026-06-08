@@ -4,9 +4,39 @@ from django.urls import reverse
 from django.contrib import messages
 import time
 from django.views.decorators.cache import never_cache
+from django.views.decorators.http import require_POST
 from django.db.models import Q
 from .models import Word, UserWord
-from .forms import AddWordForm
+from .forms import AddWordForm, EditWordForm
+
+
+WORD_METADATA_FIELDS = [
+    'translation',
+    'cefr_level',
+    'example_sentences',
+    'verb_forms',
+    'is_verb',
+    'is_noun',
+    'singular_form',
+    'plural_form',
+    'masculine_form',
+    'feminine_form',
+]
+
+
+def _parsed_word_metadata(cleaned_data):
+    return {
+        'translation': cleaned_data['parsed_translation'],
+        'cefr_level': cleaned_data['parsed_cefr_level'],
+        'example_sentences': cleaned_data.get('parsed_example_sentences', ''),
+        'verb_forms': cleaned_data.get('parsed_verb_forms', ''),
+        'is_verb': cleaned_data.get('parsed_is_verb', False),
+        'is_noun': cleaned_data.get('parsed_is_noun', False),
+        'singular_form': cleaned_data.get('parsed_singular_form', ''),
+        'plural_form': cleaned_data.get('parsed_plural_form', ''),
+        'masculine_form': cleaned_data.get('parsed_masculine_form', ''),
+        'feminine_form': cleaned_data.get('parsed_feminine_form', ''),
+    }
 
 
 @login_required(login_url='authentication:login')
@@ -25,7 +55,11 @@ def word_list(request):
     if search_query:
         user_words = user_words.filter(
             Q(word__word__icontains=search_query) |
-            Q(word__translation__icontains=search_query)
+            Q(word__translation__icontains=search_query) |
+            Q(word__singular_form__icontains=search_query) |
+            Q(word__plural_form__icontains=search_query) |
+            Q(word__masculine_form__icontains=search_query) |
+            Q(word__feminine_form__icontains=search_query)
         )
 
     # Counts by CEFR level for simple tabs/filters
@@ -64,15 +98,7 @@ def add_word(request):
             # Get parsed word data from form
             input_text = form.cleaned_data['word']
             word_text = form.cleaned_data['parsed_word']
-            translation = form.cleaned_data['parsed_translation']
-            cefr_level = form.cleaned_data['parsed_cefr_level']
-            word_defaults = {
-                'translation': translation,
-                'cefr_level': cefr_level,
-                'example_sentences': form.cleaned_data.get('parsed_example_sentences', ''),
-                'verb_forms': form.cleaned_data.get('parsed_verb_forms', ''),
-                'is_verb': form.cleaned_data.get('parsed_is_verb', False),
-            }
+            word_defaults = _parsed_word_metadata(form.cleaned_data)
             
             word = Word.objects.filter(word__iexact=word_text).first()
             if not word:
@@ -96,6 +122,19 @@ def add_word(request):
                 if not word.is_verb and form.cleaned_data.get('parsed_is_verb', False):
                     word.is_verb = True
                     updates.append('is_verb')
+                for field in (
+                    'singular_form',
+                    'plural_form',
+                    'masculine_form',
+                    'feminine_form',
+                ):
+                    parsed_value = form.cleaned_data.get(f'parsed_{field}', '')
+                    if not getattr(word, field) and parsed_value:
+                        setattr(word, field, parsed_value)
+                        updates.append(field)
+                if not word.is_noun and form.cleaned_data.get('parsed_is_noun', False):
+                    word.is_noun = True
+                    updates.append('is_noun')
                 if updates:
                     word.save(update_fields=updates)
             
@@ -135,6 +174,45 @@ def word_detail(request, pk):
         'accuracy': user_word.get_accuracy(),
     }
     return render(request, 'words/word_detail.html', context)
+
+
+@login_required(login_url='authentication:login')
+def edit_word(request, pk):
+    """Edit a saved word's stored metadata."""
+    user_word = get_object_or_404(UserWord, pk=pk, user=request.user)
+    if request.method == 'POST':
+        form = EditWordForm(request.POST, instance=user_word.word)
+        if form.is_valid():
+            form.save()
+            messages.success(request, f'"{form.instance.word}" has been updated.')
+            return redirect('words:word_detail', pk=user_word.pk)
+    else:
+        form = EditWordForm(instance=user_word.word)
+
+    return render(request, 'words/edit_word.html', {'form': form, 'user_word': user_word})
+
+
+@login_required(login_url='authentication:login')
+@require_POST
+def refresh_word(request, pk):
+    """Retrieve fresh AI metadata for a saved word."""
+    user_word = get_object_or_404(UserWord, pk=pk, user=request.user)
+    form = AddWordForm({'word': user_word.word.word})
+
+    if not form.is_valid():
+        messages.error(
+            request,
+            f'Could not retrieve fresh information: {form.errors.get("word", ["Unknown error"])[0]}',
+        )
+        return redirect('words:word_detail', pk=user_word.pk)
+
+    word = user_word.word
+    metadata = _parsed_word_metadata(form.cleaned_data)
+    for field, value in metadata.items():
+        setattr(word, field, value)
+    word.save(update_fields=WORD_METADATA_FIELDS)
+    messages.success(request, f'Information for "{word.word}" has been retrieved again.')
+    return redirect('words:word_detail', pk=user_word.pk)
 
 
 @login_required(login_url='authentication:login')

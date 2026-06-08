@@ -212,6 +212,12 @@ def review_start(request):
         verb_forms_raw = uw.word.verb_forms or ''
         is_verb = uw.word.is_verb or bool(verb_forms_raw)
         verb_forms_data = _parse_verb_forms(verb_forms_raw) if is_verb and verb_forms_raw else None
+        noun_forms_data = {
+            'singular': uw.word.singular_form,
+            'plural': uw.word.plural_form,
+            'masculine': uw.word.masculine_form,
+            'feminine': uw.word.feminine_form,
+        } if uw.word.is_noun else None
 
         cards.append({
             'pk': uw.pk,
@@ -222,6 +228,8 @@ def review_start(request):
             'examples': examples,
             'is_verb': is_verb,
             'verb_forms_data': verb_forms_data,
+            'is_noun': uw.word.is_noun,
+            'noun_forms_data': noun_forms_data,
         })
 
     import json

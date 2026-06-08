@@ -176,7 +176,7 @@
     {% endblock %}
 
     {% block extra_js %}{% endblock %}
-    <script src="{% static 'js/ui.js' %}?v=8"></script>
+    <script src="{% static 'js/ui.js' %}?v=9"></script>
     <script src="{% static 'js/verb-panel.js' %}?v=1"></script>
         <script>
             if ('serviceWorker' in navigator) {
@@ -196,7 +196,7 @@
                 });
                 window.addEventListener('load', () => {
                     navigator.serviceWorker
-                        .register('{% url "service_worker" %}?v=8', { updateViaCache: 'none' })
+                        .register('{% url "service_worker" %}?v=9', { updateViaCache: 'none' })
                         .then((registration) => registration.update());
                 });
             }
