@@ -67,7 +67,7 @@
         body { background-color: var(--background); color: var(--foreground); }
     </style>
     <link rel="stylesheet" href="{% static 'css/fonts.css' %}">
-    <link rel="stylesheet" href="{% static 'css/theme.css' %}?v=2">
+    <link rel="stylesheet" href="{% static 'css/theme.css' %}?v=4">
     {% block extra_css %}{% endblock %}
 </head>
 <body class="bg-background flex flex-col min-h-screen app-shell">
@@ -100,6 +100,7 @@
                 <nav class="hidden md:flex flex-nowrap gap-1.5 overflow-x-auto">
                     <a href="{% url 'home' %}" class="flex items-center gap-2 px-3 py-1.5 rounded-lg transition-all {% if request.resolver_match.url_name == 'home' %}bg-primary text-primary-foreground{% else %}text-foreground hover:bg-secondary{% endif %}" style="font-size:14px; white-space:nowrap;">Home</a>
                     <a href="{% url 'learning:review_start' %}" class="flex items-center gap-2 px-3 py-1.5 rounded-lg transition-all {% if request.resolver_match.url_name == 'review_start' or request.resolver_match.url_name == 'review_next' %}bg-primary text-primary-foreground{% else %}text-foreground hover:bg-secondary{% endif %}" style="font-size:14px; white-space:nowrap;">Flash Cards</a>
+                    <a href="{% url 'practice_lab:lab' %}" class="flex items-center gap-2 px-3 py-1.5 rounded-lg transition-all {% if request.resolver_match.app_name == 'practice_lab' %}bg-primary text-primary-foreground{% else %}text-foreground hover:bg-secondary{% endif %}" style="font-size:14px; white-space:nowrap;">Practice Lab</a>
                     <a href="{% url 'words:word_list' %}" class="flex items-center gap-2 px-3 py-1.5 rounded-lg transition-all {% if request.resolver_match.url_name == 'word_list' or request.resolver_match.url_name == 'word_detail' or request.resolver_match.url_name == 'delete_word' %}bg-primary text-primary-foreground{% else %}text-foreground hover:bg-secondary{% endif %}" style="font-size:14px; white-space:nowrap;">Vocabulary</a>
                     <a href="{% url 'words:add_word' %}" class="flex items-center gap-2 px-3 py-1.5 rounded-lg transition-all {% if request.resolver_match.url_name == 'add_word' %}bg-primary text-primary-foreground{% else %}text-foreground hover:bg-secondary{% endif %}" style="font-size:14px; white-space:nowrap;">Add Word</a>
                 </nav>
@@ -136,6 +137,10 @@
                 <span class="mobile-bottom-icon">▣</span>
                 <span>Review</span>
             </a>
+            <a href="{% url 'practice_lab:lab' %}" class="mobile-bottom-link {% if request.resolver_match.app_name == 'practice_lab' %}is-active{% endif %}">
+                <span class="mobile-bottom-icon">◇</span>
+                <span>Practice</span>
+            </a>
             <a href="{% url 'words:add_word' %}" class="mobile-bottom-link {% if request.resolver_match.url_name == 'add_word' %}is-active{% endif %}">
                 <span class="mobile-bottom-icon">＋</span>
                 <span>Add</span>
@@ -161,6 +166,7 @@
                     <ul class="mt-2 space-y-2 text-sm text-gray-600">
                         <li><a href="{% url 'words:add_word' %}" class="hover:text-blue-600">Add Words</a></li>
                         <li><a href="{% url 'learning:review_start' %}" class="hover:text-blue-600">Review</a></li>
+                        <li><a href="{% url 'practice_lab:lab' %}" class="hover:text-blue-600">Practice Lab</a></li>
                     </ul>
                 </div>
                 <div>
@@ -196,7 +202,7 @@
                 });
                 window.addEventListener('load', () => {
                     navigator.serviceWorker
-                        .register('{% url "service_worker" %}?v=9', { updateViaCache: 'none' })
+                        .register('{% url "service_worker" %}?v=11', { updateViaCache: 'none' })
                         .then((registration) => registration.update());
                 });
             }

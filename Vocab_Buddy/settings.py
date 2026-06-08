@@ -87,6 +87,7 @@ INSTALLED_APPS = [
     'authentication',
     'words',
     'learning',
+    'practice_lab',
 ]
 
 MIDDLEWARE = [

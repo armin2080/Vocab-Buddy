@@ -14,6 +14,14 @@ class GroqAIService:
         if not api_key:
             raise ValueError("GROQ_API_KEY not found in environment or settings")
         self.client = Groq(api_key=api_key)
+
+    def continue_practice_conversation(self, messages):
+        """Continue a Practice Lab conversation using its complete history."""
+        chat_completion = self.client.chat.completions.create(
+            messages=messages,
+            model="llama-3.3-70b-versatile",
+        )
+        return chat_completion.choices[0].message.content
     
     def get_word_info(self, word):
         """

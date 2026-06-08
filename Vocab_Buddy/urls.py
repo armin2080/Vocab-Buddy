@@ -28,6 +28,7 @@ urlpatterns = [
     path('auth/', include('authentication.urls')),
     path('words/', include('words.urls')),
     path('learning/', include('learning.urls')),
+    path('practice-lab/', include('practice_lab.urls')),
 ]
 
 urlpatterns += staticfiles_urlpatterns()

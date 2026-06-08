@@ -1,0 +1,20 @@
+{% extends 'base.html' %}
+
+{% block title %}Practice Lab - Vocab Buddy{% endblock %}
+
+{% block content %}
+    <div class="max-w-2xl mx-auto w-full">
+        <div class="rounded-2xl border border-border bg-card p-8 text-center shadow-sm">
+            <div class="mx-auto mb-5 flex h-14 w-14 items-center justify-center rounded-2xl bg-primary/10 text-primary text-2xl font-bold">P</div>
+            <h1 class="text-3xl font-bold text-foreground">Practice Lab</h1>
+            <p class="mt-3 text-muted-foreground">The first lab activity is a paragraph challenge using five words from your vocabulary.</p>
+
+            <div class="mt-8 rounded-xl bg-secondary p-5">
+                <p class="font-semibold text-foreground">Add {{ word_count|default:0 }} / 5 words</p>
+                <p class="mt-1 text-sm text-muted-foreground">You need at least five saved words before a practice session can begin.</p>
+            </div>
+
+            <a href="{% url 'words:add_word' %}" class="mt-6 inline-flex rounded-lg bg-primary px-5 py-3 text-white font-semibold hover:opacity-95">Add Vocabulary</a>
+        </div>
+    </div>
+{% endblock %}
