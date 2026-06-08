@@ -6,11 +6,19 @@
 [![PWA](https://img.shields.io/badge/PWA-Ready-blueviolet.svg)](#pwa-support)
 [![License](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 
-A modern Django web application designed to help users learn German vocabulary through spaced repetition, interactive flashcard review, AI-guided writing practice, and a responsive mobile-first interface with PWA support.
+**Turn German words you recognize into German you can actually use.**
+
+Vocab Buddy is a personal, AI-assisted German learning workspace. Add any German word and the app turns it into a useful learning card with its meaning, CEFR level, examples, grammatical forms, and review history. Then move beyond memorization in **Practice Lab**, where an AI writing coach challenges you to use difficult words in context and gives detailed, conversational feedback.
+
+Instead of giving every learner the same fixed lesson, Vocab Buddy builds practice around **your vocabulary**, **your mistakes**, and **your progress**.
+
+> Add words you care about. Review the ones you are likely to forget. Practice using them. Get feedback. Improve.
 
 ## 📋 Table of Contents
 
 - [Features](#-features)
+- [How Vocab Buddy Helps](#-how-vocab-buddy-helps)
+- [AI Practice Coach](#-ai-practice-coach)
 - [Prerequisites](#-prerequisites)
 - [Installation](#-installation)
 - [Running the Application](#-running-the-application)
@@ -26,50 +34,63 @@ A modern Django web application designed to help users learn German vocabulary t
 
 ## ✨ Features
 
-### 🎯 Core Learning Features
-- **Smart Word Addition**: Add German words with AI-powered metadata extraction
-- **German Language Validation**: AI ensures only authentic German words are accepted
-- **Automatic CEFR Classification**: Words categorized by proficiency level (A1–C2)
-- **Example Sentences**: AI-generated contextual examples for each word
-- **Verb Conjugations**: Automatic parsing and storage of all verb forms (present, past, perfect)
-- **Noun Forms**: Automatic singular, plural, masculine, and feminine forms when available
-- **Interactive Flashcards**: Flip-based card system with examples and verb conjugations
-- **Spaced Repetition Algorithm**: Intelligent word selection based on mastery level and review frequency
-- **Practice Lab**: AI-guided paragraph challenges using five prioritized vocabulary words
-- **Conversational Feedback**: Continue asking questions or revising a paragraph while the active session remembers earlier messages
+### Build a Useful Personal Dictionary
+- Add a German word, phrase, conjugated verb, or noun without an article.
+- Let AI validate the input and normalize it into a useful dictionary form.
+- Receive an English translation, CEFR difficulty level, and contextual example sentences.
+- See present, past, and perfect conjugations for verbs.
+- See singular, plural, masculine, and feminine noun forms when they exist.
+- Open any saved word to edit its information, retrieve fresh AI metadata, or remove it.
 
-### 📊 Dashboard & Analytics
-- **Weekly Progress Chart**: Visual bar chart showing words added each day over the past week
-- **Study Streak**: Track consecutive days of vocabulary practice
-- **Learning Statistics**: Total words, mastered words, and words due for review
-- **Personal Vocabulary List**: Browse, search, and manage your word collection
-- **Detailed Word Pages**: View, edit, refresh through AI, or remove saved vocabulary
+### Remember More With Focused Review
+- Review vocabulary with interactive flashcards instead of passively reading a list.
+- See examples and grammatical forms while reviewing.
+- Prioritize words based on difficulty, mistakes, review frequency, and time since the last review.
+- Track reviews, correct answers, accuracy, mastered words, weekly activity, and study streaks.
 
-### 📱 User Interface
-- **Responsive Design**: Mobile-first layout that works on all devices
-- **Tailwind CSS Styling**: Modern, accessible interface matching the original frontend theme
-- **Server-Rendered Templates**: Fast, SEO-friendly Django templates (no JS framework required)
-- **Keyboard-Friendly**: Full keyboard navigation support for accessibility
+### Turn Vocabulary Into Active German
+- Enter Practice Lab and receive a challenge built from five difficult words in your own collection.
+- Write a German paragraph that uses all five words naturally.
+- Get structured feedback on word usage, grammar, spelling, and natural phrasing.
+- Compare your paragraph with an improved German version.
+- Revise your work, ask follow-up questions, and continue the conversation with an AI coach that remembers the active session.
 
-### 🌐 PWA Support
-- **Install as App**: Save the web app to your home screen on mobile and desktop
-- **Offline Support**: Service worker caches core assets for offline functionality
-- **Web Manifest**: Installable Progressive Web App with custom icons and theme colors
-- **Native App Experience**: Standalone display mode with app-like feel
+### Learn Anywhere
+- Use a responsive interface designed for phones, tablets, and desktops.
+- Install Vocab Buddy as a Progressive Web App.
+- Keep every account's vocabulary, progress, and practice sessions separate.
 
-### 🤖 AI Integration
-- **Groq LLM**: Fast, cost-effective AI via Groq's language models
-- **Language Detection**: Validates German vs. non-German input
-- **Structured Parsing**: Extracts word metadata including translation, CEFR level, examples, noun forms, and verb forms
-- **Fallback Verb Detection**: Automatic retry with enhanced prompts for verb forms
-- **Persistence**: AI-generated data stored at creation time for reliable rendering
-- **Temporary Practice Memory**: Groq receives the complete active Practice Lab conversation; closing the session deletes its chat history
+---
 
-### 🔐 Authentication & Personalization
-- **User Accounts**: Secure registration and login system
-- **Per-User Vocabulary**: Each user maintains their own word list and progress
-- **Session Management**: Stateful sessions with automatic timeout
-- **Personalized Stats**: Dashboard tailored to each user's learning journey
+## 🎓 How Vocab Buddy Helps
+
+Many vocabulary tools stop after showing a translation. Vocab Buddy supports the full learning loop:
+
+| Step | What Vocab Buddy Does | Why It Matters |
+|------|------------------------|----------------|
+| **Discover** | Turns a word into structured, learner-friendly information | You learn more than a one-word translation |
+| **Understand** | Shows examples, noun forms, verb conjugations, and CEFR level | You see how the word behaves in real German |
+| **Remember** | Brings challenging and forgotten words back into review | Study time focuses on words that need attention |
+| **Use** | Builds writing challenges from your own vocabulary | Passive recognition becomes active language ability |
+| **Improve** | Gives corrections, explanations, and a stronger rewritten version | Mistakes become practical learning opportunities |
+
+Your vocabulary remains editable. If AI-generated information is missing or outdated, you can correct it manually or ask Vocab Buddy to retrieve the word information again.
+
+---
+
+## 🤖 AI Practice Coach
+
+Practice Lab is not a blank, generic chatbot. It begins with a clear task based on your learning history:
+
+1. Vocab Buddy selects five words from your vocabulary, prioritizing more advanced words, frequently missed words, and words that need review.
+2. You write a German paragraph using all five challenge words.
+3. The coach checks whether each word was used correctly and naturally.
+4. It explains important grammar, spelling, and phrasing improvements.
+5. It provides an improved version and invites you to revise or ask follow-up questions.
+
+During an open Practice Lab session, the coach receives the previous messages so it can understand revisions and continue the same conversation. When you select **Close Session**, the session and its chat history are deleted.
+
+Practice Lab is designed as an expandable home for future exercises such as speaking practice, voice recognition, listening tasks, role-play conversations, and other guided activities.
 
 ---
 
@@ -187,12 +208,37 @@ Edit `Vocab_Buddy/settings.py` to customize:
 
 ### Getting Started
 1. **Create Account**: Register with username and password
-2. **Add Words**: Click "Add Word" and enter German words
-3. **Review Vocabulary**: Use "Flash Cards" to review words with spaced repetition
-4. **Practice Writing**: Open "Practice Lab" and write a paragraph using five selected words
+2. **Build Your Vocabulary**: Add words you encounter in lessons, conversations, books, or media
+3. **Review Intelligently**: Use Flash Cards to focus on challenging and forgotten words
+4. **Practice Writing**: Open Practice Lab and write a paragraph using five selected words
 5. **Track Progress**: View your "Home" dashboard for weekly progress and streak
 
-### Typical Learning Workflow
+### What Happens When You Add a Word?
+
+Enter a German word such as `Haus`, `Lehrerin`, or a conjugated verb such as `ging`. Vocab Buddy uses AI to validate and normalize it, then builds a richer vocabulary entry containing the information that applies:
+
+- Dictionary form and English meaning
+- CEFR difficulty level
+- German example sentences with translations
+- Noun article, singular, plural, and gendered counterparts
+- Verb infinitive, type, present tense, past tense, participle, and auxiliary
+
+Every entry opens into a detailed page where you can inspect the information, correct fields manually, retrieve fresh AI information, or delete the word from your collection.
+
+### What Feedback Does Practice Lab Give?
+
+After you submit a paragraph, the AI coach returns clearly formatted feedback:
+
+- An overall assessment of the paragraph
+- A check of how each challenge word was used
+- Specific grammar, spelling, and word-choice improvements
+- Suggestions for more natural German phrasing
+- An improved version of your paragraph
+- A focused next step for revision
+
+You can respond with an updated paragraph or ask questions such as why a correction was needed. The coach remembers the active conversation until you close the session.
+
+### Learning Workflow
 ```
 Register → Add German Words → Review with Flashcards → Practice Writing → Track Progress
 ```
@@ -203,8 +249,8 @@ Register → Add German Words → Review with Flashcards → Practice Writing �
 |------|-------------|
 | **Home** | Dashboard with weekly progress chart, study streak, and learning stats |
 | **Flash Cards** | Interactive spaced repetition review session with examples and verb forms |
-| **Practice Lab** | Complete an AI-guided paragraph challenge with conversational feedback |
-| **Vocabulary** | Browse selectable word cards and manage detailed word information |
+| **Practice Lab** | Use difficult saved words in a paragraph, receive corrections, and revise with an AI coach |
+| **Vocabulary** | Browse selectable word cards; inspect, edit, refresh, or delete detailed entries |
 | **Add Word** | Add new German words with AI-extracted translation, CEFR level, examples, noun forms, and verb forms |
 
 ---
